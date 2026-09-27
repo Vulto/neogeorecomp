@@ -33,9 +33,15 @@ jobs:
       - name: Test
         run: make test
 
-      - name: Package native executable
+      - name: Package native runtime
+        run: |
+          mkdir -p dist/lib
+          cp neodriftout dist/neodriftout
+          cp "$(ldconfig -p | awk '/libSDL3.so.0/{print $NF; exit}')" dist/lib/libSDL3.so.0
+
+      - name: Upload native runtime
         uses: actions/upload-artifact@v4
         with:
           name: neodriftout-linux
-          path: neodriftout
+          path: dist
           if-no-files-found: error
