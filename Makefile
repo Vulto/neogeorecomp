@@ -1,11 +1,11 @@
-CC ?= gcc
-AR ?= ar
-CFLAGS ?= -std=c17 -O2 -Wall -Wextra -Wpedantic
+CC ?= clang
+AR ?= llvm-ar
+CFLAGS ?= -std=c23 -O2 -Wall -Wextra -Wpedantic
 CPPFLAGS ?= -Iinclude
-SDL2_CFLAGS ?= $(shell sdl2-config --cflags 2>/dev/null)
-SDL2_LIBS ?= $(shell sdl2-config --libs 2>/dev/null)
+SDL3_CFLAGS ?= $(shell pkg-config --cflags sdl3 2>/dev/null)
+SDL3_LIBS ?= $(shell pkg-config --libs sdl3 2>/dev/null)
 
-CFLAGS += $(SDL2_CFLAGS)
+CFLAGS += $(SDL3_CFLAGS)
 
 Library := build/libneogeorecomp.a
 Sources := \
