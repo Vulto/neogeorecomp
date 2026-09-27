@@ -1,5 +1,6 @@
 #include <neogeorecomp/neogeorecomp.h>
 #include <neogeorecomp/bus.h>
+#include <stdio.h>
 
 extern void func_01229E_upstream(void);
 
@@ -10,8 +11,10 @@ extern void func_01229E_upstream(void);
  * upload synchronously, then execute the original override unchanged.
  */
 void func_01229E(void) {
+    fprintf(stderr, "[pc-override] enter 01229E flag=%04X count=%04X\\n", bus_read16(0x102224), bus_read16(0x10222E));
     if (bus_read16(0x102224) != 0)
         func_table_call(0x012188);
 
     func_01229E_upstream();
+    fprintf(stderr, "[pc-override] leave 01229E flag=%04X count=%04X\\n", bus_read16(0x102224), bus_read16(0x10222E));
 }
