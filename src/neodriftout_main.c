@@ -31,6 +31,7 @@ static void func_007EE8(void) {
 /* ----- ROM Path Helpers ----- */
 
 static char s_rom_path[512] = ".";
+static bool s_autostart = false;
 
 static void make_path(char *buf, size_t size, const char *filename) {
     snprintf(buf, size, "%s/%s", s_rom_path, filename);
@@ -264,7 +265,9 @@ int main(int argc, char *argv[]) {
 
     /* Parse command line */
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "--autostart") == 0) {
+            s_autostart = true;
+        } else if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
             strncpy(s_rom_path, argv[++i], sizeof(s_rom_path) - 1);
         }
     }
@@ -331,7 +334,10 @@ int main(int argc, char *argv[]) {
 
     /* Start execution */
     platform_set_title("Neo Drift Out: New Technology [neogeorecomp]");
-    neogeo_run();
+    if (s_autostart)
+        func_table_call(0x000756);
+    else
+        neogeo_run();
 
     return 0;
 }
