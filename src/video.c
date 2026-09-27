@@ -36,6 +36,8 @@ static uint8_t *s_srom = NULL;       /* Fix layer tile data (S ROM) */
 static uint32_t s_srom_size = 0;
 static uint8_t *s_sfix = NULL;       /* BIOS fix tiles (SFIX ROM) */
 static uint32_t s_sfix_size = 0;
+static uint8_t *s_l0 = NULL;          /* Sprite vertical shrink lookup */
+static uint32_t s_l0_size = 0;
 
 static bool s_use_bios_fix = true;   /* Fix layer source selection */
 static bool s_shadow = false;        /* Shadow/darken mode */
@@ -56,6 +58,7 @@ void video_shutdown(void) {
     free(s_crom); s_crom = NULL; s_crom_size = 0;
     free(s_srom); s_srom = NULL; s_srom_size = 0;
     free(s_sfix); s_sfix = NULL; s_sfix_size = 0;
+    free(s_l0); s_l0 = NULL; s_l0_size = 0;
 }
 
 /* ----- ROM Loading ----- */
@@ -135,6 +138,46 @@ int video_load_sfix(const char *sfix_path) {
     return 0;
 }
 
+int video_load_l0(const char *l0_path) {
+    FILE *f = fopen(l0_path, "rb");
+    if (!f) {
+        fprintf(stderr, "[video] Failed to open L0 ROM: %s\\n", l0_path);
+        return -1;
+    }
+
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return -1;
+    }
+
+    long size = ftell(f);
+    if (size < 0x10000) {
+        fclose(f);
+        fprintf(stderr, "[video] L0 ROM is too small: %ld bytes\\n", size);
+        return -1;
+    }
+
+    rewind(f);
+    uint8_t *rom = malloc(0x10000);
+    if (!rom) {
+        fclose(f);
+        return -1;
+    }
+
+    size_t got = fread(rom, 1, 0x10000, f);
+    fclose(f);
+    if (got != 0x10000) {
+        free(rom);
+        return -1;
+    }
+
+    free(s_l0);
+    s_l0 = rom;
+    s_l0_size = 0x10000;
+    printf("[video] Loaded L0 ROM: %u bytes\\n", s_l0_size);
+    return 0;
+}
+
 /* ----- VRAM Access ----- */
 
 void video_set_vram_addr(uint16_t addr) {
@@ -191,75 +234,73 @@ uint16_t video_get_lspc_mode(void) {
  *   byte 3 (from C2): bitplanes 2,3 for pixels 8-15
  *   ... repeat for 16 rows = 128 bytes
  */
-static void decode_sprite_tile(
-    uint32_t tile_num,
-    uint8_t palette_idx,
-    bool h_flip, bool v_flip,
-    int screen_x, int screen_y,
-    const uint32_t *argb_palette,
-    uint32_t *framebuffer)
-{
-    if (!s_crom || s_crom_size == 0) return;
+static const uint16_t s_zoom_x[16] = {
+    0x0080, 0x0880, 0x0888, 0x2888,
+    0x288A, 0x2A8A, 0x2AAA, 0xAAAA,
+    0xAAEA, 0xBAEA, 0xBAEB, 0xBBEB,
+    0xBBEF, 0xFBEF, 0xFBFF, 0xFFFF
+};
+
+static uint8_t sprite_pixel(uint32_t tile_num, int x, int y) {
+    uint32_t offset = tile_num * 128u;
+    if (!s_crom || offset + 127u >= s_crom_size)
+        return 0;
 
     /*
-     * Neo Geo C ROM tile format after our byte-interleaving:
-     *
-     * We interleaved C1 and C2 byte-by-byte in video_load_crom():
-     *   byte[0] = C1[0], byte[1] = C2[0], byte[2] = C1[1], byte[3] = C2[1], ...
-     *
-     * Original C1 (odd ROM) stores bitplanes 0 and 1 for each row.
-     * Original C2 (even ROM) stores bitplanes 2 and 3 for each row.
-     * Each ROM byte = 8 pixels of one bitplane.
-     *
-     * Per tile: 16 rows x 8 bytes per row = 128 bytes.
-     * Per row: C1_bp0, C2_bp2, C1_bp1, C2_bp3 for left 8 pixels,
-     *          then same for right 8 pixels.
-     *
-     * After interleaving (C1[i], C2[i] alternating):
-     *   For each 8-pixel half-row, 4 bytes:
-     *     byte 0 (from C1): bitplane 0 for 8 pixels
-     *     byte 1 (from C2): bitplane 2 for 8 pixels
-     *     byte 2 (from C1): bitplane 1 for 8 pixels
-     *     byte 3 (from C2): bitplane 3 for 8 pixels
+     * C ROM block order is top-right, bottom-right, top-left,
+     * bottom-left. Each 8-pixel row is four interleaved bytes:
+     * C1 bitplanes 0/1 and C2 bitplanes 2/3.
      */
+    int block = (y >= 8 ? 1 : 0) + (x < 8 ? 2 : 0);
+    int row = y & 7;
+    int bit = x & 7;
+    const uint8_t *p = s_crom + offset + (uint32_t)block * 32u + row * 4;
 
-    uint32_t tile_offset = (tile_num * 128) % s_crom_size;
-    const uint8_t *tile_data = s_crom + tile_offset;
+    uint8_t bp0 = p[0];
+    uint8_t bp2 = p[1];
+    uint8_t bp1 = p[2];
+    uint8_t bp3 = p[3];
 
+    return (uint8_t)(
+        (((bp0 >> bit) & 1u) << 0) |
+        (((bp1 >> bit) & 1u) << 1) |
+        (((bp2 >> bit) & 1u) << 2) |
+        (((bp3 >> bit) & 1u) << 3));
+}
+
+static void draw_sprite_line(
+    uint32_t tile_num,
+    uint8_t palette_idx,
+    int screen_x,
+    int screen_y,
+    int source_y,
+    bool h_flip,
+    const uint32_t *argb_palette,
+    uint32_t *framebuffer,
+    uint8_t h_shrink)
+{
+    uint16_t mask = s_zoom_x[h_shrink & 0x0F];
+    int dst_x = screen_x;
     int pal_base = palette_idx * 16;
 
-    for (int row = 0; row < 16; row++) {
-        int src_row = v_flip ? (15 - row) : row;
-        int py = screen_y + row;
-        if (py < 0 || py >= NEOGEO_SCREEN_HEIGHT) continue;
+    for (int x = 0; x < 16; x++) {
+        int source_x = h_flip ? 15 - x : x;
+        if ((mask & (uint16_t)(1u << (15 - source_x))) == 0)
+            continue;
 
-        const uint8_t *row_data = tile_data + src_row * 8;
+        int px = dst_x++;
+        if (px < 0 || px >= NEOGEO_SCREEN_WIDTH)
+            continue;
 
-        for (int col = 0; col < 16; col++) {
-            int src_col = h_flip ? (15 - col) : col;
-            int px = screen_x + col;
-            if (px < 0 || px >= NEOGEO_SCREEN_WIDTH) continue;
+        uint8_t pixel = sprite_pixel(tile_num, source_x, source_y);
+        if (pixel == 0)
+            continue;
 
-            int half = src_col / 8;
-            int bit = 7 - (src_col % 8);
-            int byte_idx = half * 4;
+        uint32_t color = argb_palette[pal_base + pixel];
+        if ((color & 0xFF000000u) == 0)
+            continue;
 
-            uint8_t bp0 = row_data[byte_idx + 0];  /* bitplane 0 */
-            uint8_t bp2 = row_data[byte_idx + 1];  /* bitplane 2 */
-            uint8_t bp1 = row_data[byte_idx + 2];  /* bitplane 1 */
-            uint8_t bp3 = row_data[byte_idx + 3];  /* bitplane 3 */
-
-            uint8_t pixel = ((bp0 >> bit) & 1) << 0 |
-                            ((bp1 >> bit) & 1) << 1 |
-                            ((bp2 >> bit) & 1) << 2 |
-                            ((bp3 >> bit) & 1) << 3;
-
-            if (pixel == 0) continue;
-
-            uint32_t color = argb_palette[pal_base + pixel];
-            if ((color & 0xFF000000) == 0) continue;  /* Transparent ARGB */
-            framebuffer[py * NEOGEO_SCREEN_WIDTH + px] = color;
-        }
+        framebuffer[screen_y * NEOGEO_SCREEN_WIDTH + px] = color;
     }
 }
 
@@ -346,84 +387,112 @@ void video_render_frame(uint32_t *framebuffer) {
      * This allows building wide objects from multiple vertical strips.
      * We track chain_x across iterations for this purpose.
      */
-    int chain_x = 0;
-    int chain_y = 0;
+    typedef struct {
+        int x;
+        int y;
+        int height;
+        uint8_t v_shrink;
+        uint8_t h_shrink;
+        bool valid;
+    } SpriteState;
 
-    for (int spr = NEOGEO_MAX_SPRITES - 1; spr >= 0; spr--) {
+    SpriteState sprites[NEOGEO_MAX_SPRITES + 1] = {0};
+
+    /*
+     * Resolve sticky chains in sprite-number order first. Rendering is
+     * performed in reverse order afterwards so lower sprite numbers have
+     * higher priority.
+     */
+    for (int spr = 1; spr <= NEOGEO_MAX_SPRITES; spr++) {
         uint16_t scb3 = s_vram[0x8200 + spr];
         uint16_t scb4 = s_vram[0x8400 + spr];
         uint16_t scb2 = s_vram[0x8000 + spr];
 
-        /*
-         * SCB3 format:
-         *   Bits 15-7: Y position (raw value, screen Y = 496 - raw)
-         *   Bit 6:     Sticky bit (1 = chain X from previous sprite)
-         *   Bits 5-0:  Sprite height in tiles (0 = invisible)
-         */
         int y_raw = (scb3 >> 7) & 0x1FF;
-        int sticky = (scb3 >> 6) & 1;
-        int height_tiles = scb3 & 0x3F;
+        int x_raw = (scb4 >> 7) & 0x1FF;
+        int height = scb3 & 0x3F;
+        int y = (496 - y_raw) & 0x1FF;
+        int x = x_raw;
 
-        if (height_tiles == 0) {
-            /* No tiles — invisible, but update chain for next sprite */
-            chain_x = (scb4 >> 7) & 0x1FF;
-            chain_y = (496 - y_raw) & 0x1FF;
+        if (y >= 256) y -= 512;
+        if (x >= 256) x -= 512;
+
+        bool sticky = (scb3 & 0x40) != 0;
+
+        sprites[spr].x = x;
+        sprites[spr].y = y;
+        sprites[spr].height = height == 33 ? 32 : height;
+        sprites[spr].v_shrink = (uint8_t)(scb2 & 0xFF);
+        sprites[spr].h_shrink = (uint8_t)((scb2 >> 8) & 0x0F);
+        sprites[spr].valid = height != 0;
+
+        if (sticky && sprites[spr - 1].valid) {
+            sprites[spr].x = sprites[spr - 1].x + 16;
+            sprites[spr].y = sprites[spr - 1].y;
+            sprites[spr].height = sprites[spr - 1].height;
+            sprites[spr].v_shrink = sprites[spr - 1].v_shrink;
+        }
+    }
+
+    for (int spr = NEOGEO_MAX_SPRITES; spr >= 1; spr--) {
+        SpriteState *state = &sprites[spr];
+        if (!state->valid || state->height <= 0)
             continue;
-        }
+        if (state->v_shrink == 0 || state->h_shrink == 0)
+            continue;
+        if (!s_l0 || s_l0_size < 0x10000)
+            continue;
 
-        int screen_y = (496 - y_raw) & 0x1FF;
-        if (screen_y >= 256) screen_y -= 512;
-
-        int screen_x;
-        if (sticky) {
-            /* Inherit X from previous sprite, advance by 16 */
-            screen_x = chain_x + 16;
-        } else {
-            screen_x = (scb4 >> 7) & 0x1FF;
-        }
-        if (screen_x >= 320) screen_x -= 512;
-
-        /* Update chain position for next sprite */
-        chain_x = screen_x;
-        chain_y = screen_y;
-
-        /* SCB2: Shrink coefficients
-         * Bits 7-0:  V shrink ($FF = full, $00 = invisible)
-         * Bits 11-8: H shrink ($F = full, $0 = invisible)
-         * TODO: Implement shrinking. For now, render at full size.
-         */
-        uint8_t v_shrink = scb2 & 0xFF;
-        uint8_t h_shrink = (scb2 >> 8) & 0xF;
-        if (v_shrink == 0 || h_shrink == 0) continue;  /* Fully shrunk = invisible */
-
-        /* Read SCB1: Tile data (each sprite has space for 32 tiles x 2 words) */
         uint16_t scb1_base = (uint16_t)(spr * 64);
 
-        for (int tile_row = 0; tile_row < height_tiles && tile_row < 32; tile_row++) {
-            uint16_t scb1_even = s_vram[scb1_base + tile_row * 2];
-            uint16_t scb1_odd  = s_vram[scb1_base + tile_row * 2 + 1];
+        for (int sprite_line = 0; sprite_line < state->height * 16 && sprite_line < 512; sprite_line++) {
+            int zoom_line = sprite_line & 0xFF;
+            bool invert = (sprite_line & 0x100) != 0;
 
-            /* Tile number: 20 bits */
-            uint32_t tile_num = (uint32_t)scb1_even |
-                               (((uint32_t)(scb1_odd >> 12) & 0xF) << 16);
-
-            uint8_t palette_idx = scb1_odd & 0xFF;
-            bool h_flip = (scb1_odd & 0x0100) != 0;
-            bool v_flip = (scb1_odd & 0x0200) != 0;
-
-            /* Auto-animation */
-            uint8_t auto_anim = (scb1_odd >> 10) & 0x3;
-            if (auto_anim == 1) {
-                tile_num = (tile_num & ~0x3u) | (s_auto_anim_counter & 0x3);
-            } else if (auto_anim == 2) {
-                tile_num = (tile_num & ~0x7u) | (s_auto_anim_counter & 0x7);
+            if (state->height > 32) {
+                int period = ((int)state->v_shrink + 1) << 1;
+                zoom_line %= period;
+                if (zoom_line > state->v_shrink) {
+                    zoom_line = period - 1 - zoom_line;
+                    invert = !invert;
+                }
             }
 
-            if (tile_num == 0) continue;
+            if (invert)
+                zoom_line ^= 0xFF;
 
-            int tile_y = screen_y + tile_row * 16;
-            decode_sprite_tile(tile_num, palette_idx, h_flip, v_flip,
-                             screen_x, tile_y, argb, framebuffer);
+            uint8_t l0 = s_l0[((uint32_t)state->v_shrink << 8) | (uint32_t)zoom_line];
+            int tile_row = l0 >> 4;
+            int source_y = l0 & 0x0F;
+
+            if (invert) {
+                tile_row ^= 0x1F;
+                source_y ^= 0x0F;
+            }
+
+            uint16_t scb1_even = s_vram[scb1_base + tile_row * 2];
+            uint16_t scb1_odd = s_vram[scb1_base + tile_row * 2 + 1];
+
+            uint32_t tile_num = (uint32_t)scb1_even |
+                                (((uint32_t)(scb1_odd & 0x00F0)) << 12);
+            uint8_t palette_idx = (uint8_t)(scb1_odd >> 8);
+            bool h_flip = (scb1_odd & 0x0001) != 0;
+            bool v_flip = (scb1_odd & 0x0002) != 0;
+
+            if (scb1_odd & 0x0008)
+                tile_num = (tile_num & ~0x7u) | (s_auto_anim_counter & 0x7u);
+            else if (scb1_odd & 0x0004)
+                tile_num = (tile_num & ~0x3u) | (s_auto_anim_counter & 0x3u);
+
+            if (v_flip)
+                source_y ^= 0x0F;
+
+            int py = state->y + sprite_line;
+            if (py < 0 || py >= NEOGEO_SCREEN_HEIGHT)
+                continue;
+
+            draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
+                             h_flip, argb, framebuffer, state->h_shrink);
         }
     }
 
