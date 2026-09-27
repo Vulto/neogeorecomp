@@ -56,7 +56,6 @@ static uint8_t z80_port_in(z80 *cpu, uint8_t port) {
 
     switch (port) {
     case 0x00:
-        s_nmi_pending = false;
         return s_cmd_latch;
 
     case 0x04:
