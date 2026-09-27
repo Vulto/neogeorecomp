@@ -1,4 +1,7 @@
 /*
+ * Copyright (c) 2026 sp00nznet
+ * Licensed under the MIT License.
+ *
  * Neo Drift Out: New Technology — Static Recompilation Entry Point
  *
  * ROM files expected in --rom-path directory (supports both MAME and
