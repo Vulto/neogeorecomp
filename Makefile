@@ -1,7 +1,9 @@
 CC = clang
+CXX = clang++
 AR = llvm-ar
 CFLAGS ?= -std=c23 -O2 -Wall -Wextra -Wpedantic
-CPPFLAGS ?= -Iinclude -Igames/neodriftout/src -Igames/neodriftout/recomp -Ithird_party/z80
+CXXFLAGS ?= -std=c++14 -O2 -Wall -Wextra -Wpedantic
+CPPFLAGS ?= -Iinclude -Igames/neodriftout/src -Igames/neodriftout/recomp -Ithird_party/z80 -Ithird_party/ymfm/src
 SDL3_CFLAGS ?= $(shell pkg-config --cflags sdl3 2>/dev/null)
 SDL3_LIBS ?= $(shell pkg-config --libs sdl3 2>/dev/null)
 
@@ -22,9 +24,16 @@ RuntimeSources := \
 	third_party/z80/z80.c \
 	src/timer.c \
 	src/platform.c \
-	src/debug.c
+	src/debug.c \
+	src/ym2610_backend.cpp \
+	third_party/ymfm/src/ymfm_opn.cpp \
+	third_party/ymfm/src/ymfm_misc.cpp \
+	third_party/ymfm/src/ymfm_ssg.cpp \
+	third_party/ymfm/src/ymfm_adpcm.cpp
 
 RuntimeObjects := $(RuntimeSources:%.c=build/%.o)
+RuntimeCxxSources := $(filter %.cpp,$(RuntimeSources))
+RuntimeCxxObjects := $(RuntimeCxxSources:%.cpp=build/%.o)
 
 GameSources := \
 	src/neodriftout_main.c \
@@ -40,15 +49,19 @@ all: neodriftout
 runtime: $(RuntimeLibrary)
 
 neodriftout: $(RuntimeLibrary) $(GameObjects)
-	$(CC) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
+	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
 
-$(RuntimeLibrary): $(RuntimeObjects)
+$(RuntimeLibrary): $(RuntimeObjects) $(RuntimeCxxObjects)
 	@mkdir -p $(@D)
-	$(AR) rcs $@ $(RuntimeObjects)
+	$(AR) rcs $@ $(RuntimeObjects) $(RuntimeCxxObjects)
 
 build/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+build/%.o: %.cpp
+	@mkdir -p $(@D)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_autogen
 
