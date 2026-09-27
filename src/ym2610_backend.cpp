@@ -1,4 +1,4 @@
-#include "ym2610_backend.h"
+#include <neogeorecomp/ym2610_backend.h>
 
 #include <algorithm>
 #include <cstdint>
