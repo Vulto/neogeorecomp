@@ -97,7 +97,7 @@ void func_table_call(uint32_t addr) {
     }
 
     /* Boot logging only */
-    if (s_call_count <= 10) {
+    if (s_call_count <= 30) {
         fprintf(stderr, "[call #%u] $%06X %s\n", s_call_count, addr, func ? "OK" : "MISS");
         fflush(stderr);
     }
