@@ -52,6 +52,8 @@ build/%.o: %.c
 
 build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_autogen
 
+build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
+
 debug: CFLAGS += -g -O0
 debug: clean all
 
