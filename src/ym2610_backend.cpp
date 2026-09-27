@@ -1,6 +1,5 @@
 #include <neogeorecomp/ym2610_backend.h>
 
-#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -29,7 +28,9 @@ static int32_t s_curr;
 static bool s_primed;
 
 static int16_t clamp16(int32_t value) {
-    return (int16_t)std::clamp(value, -32768, 32767);
+    if (value < -32768) value = -32768;
+    if (value > 32767) value = 32767;
+    return (int16_t)value;
 }
 
 extern "C" int ym2610_backend_init(int sample_rate) {
