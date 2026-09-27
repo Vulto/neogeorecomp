@@ -32,3 +32,10 @@ jobs:
 
       - name: Test
         run: make test
+
+      - name: Package native executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: neodriftout-linux
+          path: neodriftout
+          if-no-files-found: error
