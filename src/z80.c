@@ -5,7 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#define z80_init z80_core_init
 #include "z80.h"
+#undef z80_init
 
 #define Z80_RAM_SIZE 0x800u
 
@@ -123,7 +125,7 @@ static void z80_port_out(z80 *cpu, uint8_t port, uint8_t value) {
 }
 
 static void z80_setup(void) {
-    z80_init(&s_cpu);
+    z80_core_init(&s_cpu);
     s_cpu.read_byte = z80_mem_read;
     s_cpu.write_byte = z80_mem_write;
     s_cpu.port_in = z80_port_in;
