@@ -27,7 +27,7 @@ RuntimeSources := \
 RuntimeObjects := $(RuntimeSources:%.c=build/%.o)
 
 GameSources := \
-	games/neodriftout/src/main.c \
+	src/neodriftout_main.c \
 	$(wildcard games/neodriftout/recomp/*.c) \
 	$(wildcard games/neodriftout/src/autorecomp/*.c)
 
