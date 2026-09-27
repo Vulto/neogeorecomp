@@ -111,6 +111,7 @@ static void bios_return_to_system(void) {
     if (bus_read16(0x10FE80) != 0) {
         printf("[BIOS stub] Start pressed — entering car select!\n");
         bus_bios_write8(0x10FDAE, 3);
+            bus_write16(0x100426, 12);
         bus_write16(0x10FE80, 0);
     }
 }
