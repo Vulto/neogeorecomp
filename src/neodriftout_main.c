@@ -31,6 +31,8 @@ static void func_007EE8(void) {
 /* ----- ROM Path Helpers ----- */
 
 static char s_rom_path[512] = ".";
+static bool s_autostart = false;
+static unsigned s_autostart_frames = 0;
 
 static void make_path(char *buf, size_t size, const char *filename) {
     snprintf(buf, size, "%s/%s", s_rom_path, filename);
@@ -138,6 +140,14 @@ static void bios_vblank_process(void) {
      *   $10FD8A-$10FD8F: soft-DIP and player config
      */
     uint8_t p1 = io_read_p1cnt();
+    if (s_autostart && s_autostart_frames < 90) {
+        s_autostart_frames++;
+        if (s_autostart_frames == 60) {
+            fprintf(stderr, "[autostart] entering player mode\\n");
+            bus_bios_write8(0x10FDAE, 3);
+        }
+    }
+
     uint8_t p2 = io_read_p2cnt();
     uint8_t status = io_read_status_b();
 
@@ -264,7 +274,9 @@ int main(int argc, char *argv[]) {
 
     /* Parse command line */
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "--autostart") == 0) {
+            s_autostart = true;
+        } else if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
             strncpy(s_rom_path, argv[++i], sizeof(s_rom_path) - 1);
         }
     }
