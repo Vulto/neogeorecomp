@@ -1,0 +1,3 @@
+[submodule "games/neodriftout"]
+	path = games/neodriftout
+	url = https://github.com/sp00nznet/neodriftout.git
