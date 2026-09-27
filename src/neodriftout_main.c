@@ -318,6 +318,7 @@ int main(int argc, char *argv[]) {
     extern void func_000CC6(void);  /* Sub-state 1 handler (split fix) */
     func_table_register(0x01229E, func_01229E);
     extern void func_012202(void);  /* Sprite allocator (with logging) */
+    extern void func_01229E(void);  /* Sprite upload synchronization wrapper */
     func_table_register(0x012202, func_012202);
     func_table_register(0x011C78, func_011C78);
     func_table_register(0x011C88, func_011C88);
