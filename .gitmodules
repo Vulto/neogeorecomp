@@ -1,3 +1,7 @@
 [submodule "games/neodriftout"]
 	path = games/neodriftout
 	url = https://github.com/sp00nznet/neodriftout.git
+
+[submodule "third_party/z80"]
+	path = third_party/z80
+	url = https://github.com/superzazu/z80.git

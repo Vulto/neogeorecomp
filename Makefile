@@ -1,7 +1,7 @@
 CC = clang
 AR = llvm-ar
 CFLAGS ?= -std=c23 -O2 -Wall -Wextra -Wpedantic
-CPPFLAGS ?= -Iinclude -Igames/neodriftout/src -Igames/neodriftout/recomp
+CPPFLAGS ?= -Iinclude -Igames/neodriftout/src -Igames/neodriftout/recomp -Ithird_party/z80
 SDL3_CFLAGS ?= $(shell pkg-config --cflags sdl3 2>/dev/null)
 SDL3_LIBS ?= $(shell pkg-config --libs sdl3 2>/dev/null)
 
@@ -19,6 +19,7 @@ RuntimeSources := \
 	src/io.c \
 	src/ym2610.c \
 	src/z80.c \
+	third_party/z80/z80.c \
 	src/timer.c \
 	src/platform.c \
 	src/debug.c
@@ -51,6 +52,8 @@ build/%.o: %.c
 
 build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_autogen
 
+build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
+
 debug: CFLAGS += -g -O0
 debug: clean all
 
@@ -63,7 +66,7 @@ romcheck:
 
 run: neodriftout
 	@test -n "$(ROM_DIR)" || (echo "usage: make run ROM_DIR=/path/to/roms" >&2; exit 2)
-	@tools/check_neodriftout_roms.sh "$(ROM_DIR)"
+	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
 	./neodriftout --rom-path "$(ROM_DIR)"
 
 clean:
