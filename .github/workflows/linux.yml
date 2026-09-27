@@ -39,9 +39,40 @@ jobs:
           cp neodriftout dist/neodriftout
           cp "$(ldconfig -p | awk '/libSDL3.so.0/{print $NF; exit}')" dist/lib/libSDL3.so.0
 
-      - name: Upload native runtime
+      - name: Build portable runtime bundle
+        run: |
+          set -eu
+          rm -rf portable
+          mkdir -p portable/rootfs
+          cp -a dist/neodriftout portable/rootfs/neodriftout
+          copy_deps() {
+            ldd "$1" | awk '/=> \/|^\// {for (i=1; i<=NF; i++) if ($i ~ /^\//) {print $i; break}}' | sort -u
+          }
+          queue="$(copy_deps portable/rootfs/neodriftout) $(copy_deps dist/lib/libSDL3.so.0)"
+          while [ -n "$queue" ]; do
+            next=""
+            for lib in $queue; do
+              case "$lib" in
+                /lib*|/usr/lib*)
+                  target="portable/rootfs$lib"
+                  mkdir -p "$(dirname "$target")"
+                  if [ ! -e "$target" ]; then
+                    cp -a "$lib" "$target"
+                    deps="$(copy_deps "$lib" || true)"
+                    next="$next $deps"
+                  fi
+                  ;;
+              esac
+            done
+            queue="$(printf '%s\n' $next | sort -u | tr '\n' ' ')"
+          done
+          mkdir -p portable/rootfs/lib
+          cp -a dist/lib/libSDL3.so.0 portable/rootfs/lib/libSDL3.so.0
+          tar -C portable/rootfs -czf portable/neodriftout-rootfs.tar.gz .
+
+      - name: Upload portable runtime bundle
         uses: actions/upload-artifact@v4
         with:
-          name: neodriftout-linux
-          path: dist
+          name: neodriftout-portable-linux
+          path: portable/neodriftout-rootfs.tar.gz
           if-no-files-found: error
