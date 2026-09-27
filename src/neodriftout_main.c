@@ -22,6 +22,12 @@
 /* Auto-generated: 6,475 functions + recomp_register_all() */
 #include "autorecomp/recomp_funcs.h"
 
+/* Jump-table target at the end of sub_007EDA. It is a valid code
+ * continuation in the original 68k program, not a standalone generated
+ * function, so the function dispatcher needs an explicit terminal entry. */
+static void func_007EE8(void) {
+}
+
 /* ----- ROM Path Helpers ----- */
 
 static char s_rom_path[512] = ".";
@@ -317,6 +323,7 @@ int main(int argc, char *argv[]) {
     func_table_register(0x011C88, func_011C88);
     func_table_register(0x011C98, func_011C98);
     func_table_register(0x000CC6, func_000CC6);
+    func_table_register(0x007EE8, func_007EE8);
 
     printf("[neodriftout] Registered %u total functions (with hand-written overrides)\n",
            func_table_count());
