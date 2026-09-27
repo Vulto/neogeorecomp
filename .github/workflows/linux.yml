@@ -1,0 +1,32 @@
+name: Linux
+
+on:
+  push:
+    branches:
+      - master
+      - "work/**"
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm make libsdl3-dev
+
+      - name: Build
+        run: make
+
+      - name: Test
+        run: make test
