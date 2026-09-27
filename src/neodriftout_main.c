@@ -344,7 +344,12 @@ int main(int argc, char *argv[]) {
 
     /* Start execution */
     platform_set_title("Neo Drift Out: New Technology [neogeorecomp]");
-    neogeo_run();
+    if (s_autostart) {
+        fprintf(stderr, "[autostart] invoking player state 3 directly\\n");
+        func_table_call(0x000756);
+    } else {
+        neogeo_run();
+    }
 
     return 0;
 }
