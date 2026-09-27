@@ -1,0 +1,48 @@
+name: Linux
+
+on:
+  push:
+    branches:
+      - master
+      - "work/**"
+      - "agent/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build gcc clang libsdl2-dev
+
+      - name: Configure (GCC)
+        run: |
+          cmake -S . -B build/gcc -G Ninja \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DNEOGEORECOMP_BUILD_TESTS=ON
+
+      - name: Build (GCC)
+        run: cmake --build build/gcc --parallel
+
+      - name: Configure (Clang)
+        run: |
+          cmake -S . -B build/clang -G Ninja \
+            -DCMAKE_C_COMPILER=clang \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DNEOGEORECOMP_BUILD_TESTS=ON
+
+      - name: Build (Clang)
+        run: cmake --build build/clang --parallel
+
+      - name: Test
+        run: ctest --test-dir build/gcc --output-on-failure
