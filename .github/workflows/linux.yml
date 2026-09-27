@@ -43,31 +43,25 @@ jobs:
         run: |
           set -eu
           rm -rf portable
-          mkdir -p portable/rootfs
+          mkdir -p portable/rootfs/lib portable/rootfs/lib64
           cp -L dist/neodriftout portable/rootfs/neodriftout
-          copy_one() {
-            lib=$1
-            [ -f "$lib" ] || return 0
-            rel=${lib#/}
-            target="portable/rootfs/$rel"
-            mkdir -p "$(dirname "$target")"
-            [ -f "$target" ] || cp -L "$lib" "$target"
+          copy_deps() {
+            ldd "$1" | awk '{for (i=1; i<=NF; i++) if ($i ~ /^\//) print $i}' | sort -u
           }
-          queue="$(ldd portable/rootfs/neodriftout | awk '{for (i=1; i<=NF; i++) if ($i ~ /^\//) print $i}') $(ldd dist/lib/libSDL3.so.0 | awk '{for (i=1; i<=NF; i++) if ($i ~ /^\//) print $i}')"
-          seen=""
-          while [ -n "$queue" ]; do
-            next=""
-            for lib in $queue; do
-              case " $seen " in *" $lib "*) continue;; esac
-              seen="$seen $lib"
-              copy_one "$lib"
-              deps="$(ldd "$lib" 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($i ~ /^\//) print $i}' || true)"
-              next="$next $deps"
-            done
-            queue="$(printf '%s\n' $next | sort -u | tr '\n' ' ')"
+          for lib in $(copy_deps portable/rootfs/neodriftout) $(copy_deps dist/lib/libSDL3.so.0); do
+            case "$lib" in /lib*|/usr/lib*)
+              rel=${lib#/}
+              mkdir -p "portable/rootfs/$(dirname "$rel")"
+              cp -L "$lib" "portable/rootfs/$rel"
+            ;; esac
           done
-          mkdir -p portable/rootfs/lib
           cp -L dist/lib/libSDL3.so.0 portable/rootfs/lib/libSDL3.so.0
+          loader=$(readelf -l portable/rootfs/neodriftout | awk '/interpreter/ {gsub(/[\[\]]/, "", $NF); print $NF}')
+          if [ -n "$loader" ] && [ -f "$loader" ]; then
+            rel=${loader#/}
+            mkdir -p "portable/rootfs/$(dirname "$rel")"
+            cp -L "$loader" "portable/rootfs/$rel"
+          fi
           tar -C portable/rootfs -czf portable/neodriftout-rootfs.tar.gz .
 
       - name: Upload portable runtime bundle
