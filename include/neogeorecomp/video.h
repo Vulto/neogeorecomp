@@ -78,6 +78,9 @@ int video_load_srom(const char *srom_path);
 /* Load BIOS fix tiles (SFIX ROM). */
 int video_load_sfix(const char *sfix_path);
 
+/* Load the Neo Geo L0 sprite vertical-shrink lookup ROM. */
+int video_load_l0(const char *l0_path);
+
 /* ----- VRAM Access (called by bus layer on $3C0000-$3C0004 access) ----- */
 
 /* Set the VRAM address pointer. */
