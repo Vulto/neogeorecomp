@@ -23,26 +23,10 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build gcc clang libsdl2-dev
+          sudo apt-get install -y clang llvm make libsdl3-dev
 
-      - name: Configure (GCC)
-        run: |
-          cmake -S . -B build/gcc -G Ninja \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DNEOGEORECOMP_BUILD_TESTS=ON
-
-      - name: Build (GCC)
-        run: cmake --build build/gcc --parallel
-
-      - name: Configure (Clang)
-        run: |
-          cmake -S . -B build/clang -G Ninja \
-            -DCMAKE_C_COMPILER=clang \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-            -DNEOGEORECOMP_BUILD_TESTS=ON
-
-      - name: Build (Clang)
-        run: cmake --build build/clang --parallel
+      - name: Build
+        run: make
 
       - name: Test
-        run: ctest --test-dir build/gcc --output-on-failure
+        run: make test
