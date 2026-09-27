@@ -71,6 +71,16 @@ static uint8_t z80_port_in(z80 *cpu, uint8_t port) {
     case 0x07:
         return ym2610_read(3);
 
+    case 0x08:
+    case 0x09:
+    case 0x0A:
+    case 0x0B:
+        /* Neo Geo banks are selected by the value placed on the Z80
+         * address bus during an IN instruction. For IN A,(n), that
+         * value is the accumulator. */
+        s_bank[port - 0x08] = cpu->a;
+        return 0xFF;
+
     default:
         return 0xFF;
     }
@@ -98,22 +108,6 @@ static void z80_port_out(z80 *cpu, uint8_t port, uint8_t value) {
 
     case 0x07:
         ym2610_write(3, 0, value);
-        break;
-
-    case 0x08:
-        s_bank[0] = value;
-        break;
-
-    case 0x09:
-        s_bank[1] = value;
-        break;
-
-    case 0x0A:
-        s_bank[2] = value;
-        break;
-
-    case 0x0B:
-        s_bank[3] = value;
         break;
 
     case 0x0C:
@@ -225,13 +219,12 @@ uint8_t z80_read_reply(void) {
 
 void z80_set_nmi_enabled(bool enabled) {
     s_nmi_enabled = enabled;
-    if (enabled)
-        s_cpu.iff1 = s_cpu.iff1;
 }
 
 void z80_reset(void) {
     memset(s_z80_ram, 0, sizeof(s_z80_ram));
     s_cmd_latch = 0;
     s_reply_latch = 0;
+    s_nmi_enabled = false;
     z80_setup();
 }
