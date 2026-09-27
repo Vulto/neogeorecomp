@@ -229,4 +229,4 @@ make romcheck ROM_DIR=/path/to/roms
 make run ROM_DIR=/path/to/roms
 ```
 
-The checker validates the seven game ROM files used by `src/main.c` by size and SHA-256. The ROM files themselves remain outside Git and CI.
+The checker validates the seven game ROM files plus the required 000-lo.lo system ROM by size and SHA-256. The ROM files themselves remain outside Git and CI.
