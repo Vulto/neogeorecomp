@@ -27,7 +27,9 @@ RuntimeSources := \
 	src/debug.c \
 	src/ym2610_backend.cpp \
 	third_party/ymfm/src/ymfm_opn.cpp \
-	third_party/ymfm/src/ymfm_misc.cpp
+	third_party/ymfm/src/ymfm_misc.cpp \
+	third_party/ymfm/src/ymfm_ssg.cpp \
+	third_party/ymfm/src/ymfm_adpcm.cpp
 
 RuntimeObjects := $(RuntimeSources:%.c=build/%.o)
 RuntimeCxxSources := $(filter %.cpp,$(RuntimeSources))
