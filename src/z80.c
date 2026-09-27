@@ -1,46 +1,156 @@
-/*
- * z80.c — Z80 audio CPU stub implementation.
- *
- * TODO: Integrate a Z80 emulator core (e.g., z80ex, or a custom
- * interpreter). For now, this stubs out the communication interface
- * and does not execute any Z80 code.
- *
- * The Z80's role on the Neo Geo is straightforward: receive sound
- * commands from the 68k via NMI, then program the YM2610 accordingly.
- * Most games use variants of SNK's standard sound driver.
- *
- * Integration options:
- *   1. Interpreted Z80 emulation (most accurate)
- *   2. HLE of the sound driver (game-specific but simpler)
- *   3. Static recompilation of the Z80 code (ambitious but possible)
- *
- * We'll start with option 1 using a proven Z80 core.
- */
-
 #include <neogeorecomp/z80.h>
+#include <neogeorecomp/ym2610.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
+#include "z80.h"
 
-/* ----- Internal State ----- */
+#define Z80_RAM_SIZE 0x800u
 
-static uint8_t *s_mrom = NULL;       /* M ROM (Z80 program) */
-static uint32_t s_mrom_size = 0;
-static uint8_t s_z80_ram[2048];      /* Z80 Work RAM (2 KB, $F800-$FFFF) */
+static z80 s_cpu;
+static uint8_t *s_mrom;
+static uint32_t s_mrom_size;
+static uint8_t s_z80_ram[Z80_RAM_SIZE];
+static uint8_t s_cmd_latch;
+static uint8_t s_reply_latch;
+static uint8_t s_bank[4];
+static bool s_nmi_enabled;
 
-static uint8_t s_cmd_latch = 0;      /* Command from 68k */
-static uint8_t s_reply_latch = 0;    /* Reply to 68k */
-static bool s_nmi_enabled = true;
-static bool s_nmi_pending = false;
+static uint8_t rom_read(uint32_t offset) {
+    if (!s_mrom || offset >= s_mrom_size)
+        return 0xFF;
+    return s_mrom[offset];
+}
 
-/* ----- Initialization ----- */
+static uint8_t z80_mem_read(void *userdata, uint16_t address) {
+    (void)userdata;
+
+    if (address < 0x8000)
+        return rom_read(address);
+
+    if (address < 0xC000)
+        return rom_read((uint32_t)s_bank[3] * 0x4000u + (address - 0x8000u));
+
+    if (address < 0xE000)
+        return rom_read((uint32_t)s_bank[2] * 0x2000u + (address - 0xC000u));
+
+    if (address < 0xF000)
+        return rom_read((uint32_t)s_bank[1] * 0x1000u + (address - 0xE000u));
+
+    if (address < 0xF800)
+        return rom_read((uint32_t)s_bank[0] * 0x0800u + (address - 0xF000u));
+
+    return s_z80_ram[address - 0xF800u];
+}
+
+static void z80_mem_write(void *userdata, uint16_t address, uint8_t value) {
+    (void)userdata;
+    if (address >= 0xF800)
+        s_z80_ram[address - 0xF800u] = value;
+}
+
+static uint8_t z80_port_in(z80 *cpu, uint8_t port) {
+    (void)cpu;
+
+    switch (port) {
+    case 0x00:
+        s_nmi_pending = false;
+        return s_cmd_latch;
+
+    case 0x04:
+        return ym2610_read(0);
+
+    case 0x05:
+        return ym2610_read(1);
+
+    case 0x06:
+        return ym2610_read(2);
+
+    case 0x07:
+        return ym2610_read(3);
+
+    default:
+        return 0xFF;
+    }
+}
+
+static void z80_port_out(z80 *cpu, uint8_t port, uint8_t value) {
+    (void)cpu;
+
+    switch (port) {
+    case 0x00:
+        s_cmd_latch = 0;
+        break;
+
+    case 0x04:
+        ym2610_write(0, value, 0);
+        break;
+
+    case 0x05:
+        ym2610_write(1, 0, value);
+        break;
+
+    case 0x06:
+        ym2610_write(2, value, 0);
+        break;
+
+    case 0x07:
+        ym2610_write(3, 0, value);
+        break;
+
+    case 0x08:
+        s_bank[0] = value;
+        break;
+
+    case 0x09:
+        s_bank[1] = value;
+        break;
+
+    case 0x0A:
+        s_bank[2] = value;
+        break;
+
+    case 0x0B:
+        s_bank[3] = value;
+        break;
+
+    case 0x0C:
+        s_reply_latch = value;
+        break;
+
+    case 0x18:
+        s_nmi_enabled = false;
+        break;
+
+    default:
+        break;
+    }
+}
+
+static void z80_setup(void) {
+    z80_init(&s_cpu);
+    s_cpu.read_byte = z80_mem_read;
+    s_cpu.write_byte = z80_mem_write;
+    s_cpu.port_in = z80_port_in;
+    s_cpu.port_out = z80_port_out;
+    s_cpu.userdata = NULL;
+
+    s_bank[0] = 0x1E;
+    s_bank[1] = 0x0E;
+    s_bank[2] = 0x06;
+    s_bank[3] = 0x02;
+    s_nmi_enabled = false;
+}
 
 int z80_init(void) {
     memset(s_z80_ram, 0, sizeof(s_z80_ram));
     s_cmd_latch = 0;
     s_reply_latch = 0;
-    s_nmi_enabled = true;
-    s_nmi_pending = false;
+    s_mrom = NULL;
+    s_mrom_size = 0;
+    z80_setup();
     return 0;
 }
 
@@ -50,50 +160,62 @@ void z80_shutdown(void) {
     s_mrom_size = 0;
 }
 
-/* ----- M ROM Loading ----- */
-
 int z80_load_mrom(const char *mrom_path) {
     FILE *f = fopen(mrom_path, "rb");
     if (!f) {
         fprintf(stderr, "[z80] Failed to open M ROM: %s\n", mrom_path);
         return -1;
     }
-    fseek(f, 0, SEEK_END);
-    s_mrom_size = (uint32_t)ftell(f);
-    fseek(f, 0, SEEK_SET);
-    s_mrom = (uint8_t *)malloc(s_mrom_size);
-    if (!s_mrom) { fclose(f); return -1; }
-    fread(s_mrom, 1, s_mrom_size, f);
+
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return -1;
+    }
+
+    long size = ftell(f);
+    if (size <= 0) {
+        fclose(f);
+        return -1;
+    }
+
+    rewind(f);
+    uint8_t *rom = malloc((size_t)size);
+    if (!rom) {
+        fclose(f);
+        return -1;
+    }
+
+    size_t got = fread(rom, 1, (size_t)size, f);
     fclose(f);
+    if (got != (size_t)size) {
+        free(rom);
+        return -1;
+    }
+
+    free(s_mrom);
+    s_mrom = rom;
+    s_mrom_size = (uint32_t)size;
+    z80_setup();
+
     printf("[z80] Loaded M ROM: %u bytes\n", s_mrom_size);
     return 0;
 }
 
-/* ----- Execution ----- */
-
 void z80_execute(int cycles) {
-    /*
-     * TODO: Run the Z80 emulator core for the given number of cycles.
-     * For now, this is a no-op — no audio processing occurs.
-     */
-    (void)cycles;
+    if (cycles <= 0 || !s_mrom)
+        return;
 
-    /* If an NMI is pending and enabled, the Z80 would handle the command */
-    if (s_nmi_pending && s_nmi_enabled) {
-        /* In the real implementation, this would trigger the Z80's NMI handler.
-         * The handler reads the command byte from port $00, processes it,
-         * and writes a reply to port $0C. */
-        s_reply_latch = s_cmd_latch | 0x80;  /* Stub: echo with bit 7 set */
-        s_nmi_pending = false;
-    }
+    unsigned long start = s_cpu.cyc;
+    unsigned long target = start + (unsigned long)cycles;
+
+    while (s_cpu.cyc < target)
+        z80_step(&s_cpu);
 }
-
-/* ----- 68k <-> Z80 Communication ----- */
 
 void z80_send_command(uint8_t cmd) {
     s_cmd_latch = cmd;
     if (s_nmi_enabled) {
-        s_nmi_pending = true;
+        z80_gen_nmi(&s_cpu);
     }
 }
 
@@ -101,18 +223,15 @@ uint8_t z80_read_reply(void) {
     return s_reply_latch;
 }
 
-/* ----- NMI Control ----- */
-
 void z80_set_nmi_enabled(bool enabled) {
     s_nmi_enabled = enabled;
+    if (enabled)
+        s_cpu.iff1 = s_cpu.iff1;
 }
-
-/* ----- Reset ----- */
 
 void z80_reset(void) {
     memset(s_z80_ram, 0, sizeof(s_z80_ram));
     s_cmd_latch = 0;
     s_reply_latch = 0;
-    s_nmi_enabled = true;
-    s_nmi_pending = false;
+    z80_setup();
 }
