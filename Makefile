@@ -1,14 +1,15 @@
 CC ?= clang
 AR ?= llvm-ar
 CFLAGS ?= -std=c23 -O2 -Wall -Wextra -Wpedantic
-CPPFLAGS ?= -Iinclude
+CPPFLAGS ?= -Iinclude -Igames/neodriftout/src -Igames/neodriftout/recomp
 SDL3_CFLAGS ?= $(shell pkg-config --cflags sdl3 2>/dev/null)
 SDL3_LIBS ?= $(shell pkg-config --libs sdl3 2>/dev/null)
 
 CFLAGS += $(SDL3_CFLAGS)
 
-Library := build/libneogeorecomp.a
-Sources := \
+RuntimeLibrary := build/libneogeorecomp.a
+
+RuntimeSources := \
 	src/neogeorecomp.c \
 	src/m68k.c \
 	src/bus.c \
@@ -22,15 +23,27 @@ Sources := \
 	src/platform.c \
 	src/debug.c
 
-Objects := $(Sources:%.c=build/%.o)
+RuntimeObjects := $(RuntimeSources:%.c=build/%.o)
 
-.PHONY: all clean test debug
+GameSources := \
+	games/neodriftout/src/main.c \
+	$(wildcard games/neodriftout/recomp/*.c) \
+	$(wildcard games/neodriftout/src/autorecomp/*.c)
 
-all: $(Library)
+GameObjects := $(GameSources:%.c=build/%.o)
 
-$(Library): $(Objects)
+.PHONY: all clean test debug runtime neodriftout
+
+all: neodriftout
+
+runtime: $(RuntimeLibrary)
+
+neodriftout: $(RuntimeLibrary) $(GameObjects)
+	$(CC) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
+
+$(RuntimeLibrary): $(RuntimeObjects)
 	@mkdir -p $(@D)
-	$(AR) rcs $@ $(Objects)
+	$(AR) rcs $@ $(RuntimeObjects)
 
 build/%.o: %.c
 	@mkdir -p $(@D)
@@ -39,8 +52,8 @@ build/%.o: %.c
 debug: CFLAGS += -g -O0
 debug: clean all
 
-test: all
-	@echo "No test executable is defined yet."
+test: neodriftout
+	@echo "Neo Drift Out build smoke test passed."
 
 clean:
-	rm -rf build
+	rm -rf build neodriftout
