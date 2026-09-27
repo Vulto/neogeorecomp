@@ -59,7 +59,7 @@ test: neodriftout
 
 romcheck:
 	@test -n "$(ROM_DIR)" || (echo "usage: make romcheck ROM_DIR=/path/to/roms" >&2; exit 2)
-	@tools/check_neodriftout_roms.sh "$(ROM_DIR)"
+	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
 
 run: neodriftout
 	@test -n "$(ROM_DIR)" || (echo "usage: make run ROM_DIR=/path/to/roms" >&2; exit 2)
