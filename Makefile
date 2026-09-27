@@ -1,5 +1,5 @@
-CC ?= clang
-AR ?= llvm-ar
+CC = clang
+AR = llvm-ar
 CFLAGS ?= -std=c23 -O2 -Wall -Wextra -Wpedantic
 CPPFLAGS ?= -Iinclude -Igames/neodriftout/src -Igames/neodriftout/recomp
 SDL3_CFLAGS ?= $(shell pkg-config --cflags sdl3 2>/dev/null)
@@ -48,6 +48,8 @@ $(RuntimeLibrary): $(RuntimeObjects)
 build/%.o: %.c
 	@mkdir -p $(@D)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_autogen
 
 debug: CFLAGS += -g -O0
 debug: clean all
