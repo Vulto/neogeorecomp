@@ -219,3 +219,14 @@ This is an active project and we welcome contributions. Whether you're intereste
 - Writing documentation or tutorials
 
 Open an issue or PR. Let's make Neo Geo games run natively everywhere.
+
+### Validating a ROM set
+
+The native runtime does not require ROM data to be committed to this repository. To validate a locally dumped Neo Drift Out set before running the executable:
+
+```bash
+make romcheck ROM_DIR=/path/to/roms
+make run ROM_DIR=/path/to/roms
+```
+
+The checker validates the seven game ROM files used by `src/main.c` by size and SHA-256. The ROM files themselves remain outside Git and CI.
