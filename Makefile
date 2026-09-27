@@ -32,7 +32,7 @@ GameSources := \
 
 GameObjects := $(GameSources:%.c=build/%.o)
 
-.PHONY: all clean test debug runtime neodriftout
+.PHONY: all clean test debug runtime neodriftout romcheck run
 
 all: neodriftout
 
@@ -56,6 +56,15 @@ debug: clean all
 
 test: neodriftout
 	@echo "Neo Drift Out build smoke test passed."
+
+romcheck:
+	@test -n "$(ROM_DIR)" || (echo "usage: make romcheck ROM_DIR=/path/to/roms" >&2; exit 2)
+	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
+
+run: neodriftout
+	@test -n "$(ROM_DIR)" || (echo "usage: make run ROM_DIR=/path/to/roms" >&2; exit 2)
+	@tools/check_neodriftout_roms.sh "$(ROM_DIR)"
+	./neodriftout --rom-path "$(ROM_DIR)"
 
 clean:
 	rm -rf build neodriftout
