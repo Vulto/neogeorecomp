@@ -66,18 +66,15 @@ else
 # Initialize submodules through Git's own recovery path. A stale plain
 # directory is not a usable submodule worktree; remove it before cloning.
 SUBMODULE_READY_STAMP := .git/submodules-ready
-SUBMODULE_PATHS := games/neodriftout third_party/z80 third_party/ymfm
 
 all runtime neodriftout test: $(SUBMODULE_READY_STAMP)
 	@$(MAKE) SUBMODULES_READY=1 $@
 
 $(SUBMODULE_READY_STAMP): .gitmodules
 	@git submodule sync --recursive
-	@for path in $(SUBMODULE_PATHS); do \\
-		if [ -d "$$path" ] && [ ! -e "$$path/.git" ]; then \\
-			rm -rf "$$path"; \\
-		fi; \\
-	done
+	@if [ -d "games/neodriftout" ] && [ ! -e "games/neodriftout/.git" ]; then rm -rf "games/neodriftout"; fi
+	@if [ -d "third_party/z80" ] && [ ! -e "third_party/z80/.git" ]; then rm -rf "third_party/z80"; fi
+	@if [ -d "third_party/ymfm" ] && [ ! -e "third_party/ymfm/.git" ]; then rm -rf "third_party/ymfm"; fi
 	@git submodule update --init --recursive
 	@mkdir -p $(@D)
 	@touch $@
