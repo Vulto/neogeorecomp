@@ -115,6 +115,11 @@ static void z80_port_out(z80 *cpu, uint8_t port, uint8_t value) {
         s_reply_latch = value;
         break;
 
+    case 0x08:
+        /* NMI enable/acknowledge. The YM2610 command path uses this
+         * before accepting 68k sound commands. */
+        s_nmi_enabled = true;
+        break;
     case 0x18:
         s_nmi_enabled = false;
         break;
