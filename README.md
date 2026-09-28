@@ -222,7 +222,7 @@ The game sources are statically recompiled 68000 C, but generated code is not au
 make decomp-audit
 ```
 
-The audit currently reports generated `TODO` instructions so missing 68000 translation coverage can be addressed systematically. A clean build or runtime self-test does **not** imply that every generated instruction has been translated.
+The audit reports untranslated instruction TODOs separately from raw `dc.w` data records and also reports unhandled operand expressions. A clean build or runtime self-test does **not** imply that every generated instruction has been translated.
 
 ## Neo Geo Memory Map
 
