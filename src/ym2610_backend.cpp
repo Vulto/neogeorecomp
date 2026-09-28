@@ -6,6 +6,8 @@
 
 #include "ymfm_opn.h"
 
+static bool s_irq_pending;
+
 class ym2610_interface final : public ymfm::ymfm_interface {
 public:
     std::vector<uint8_t> vrom;
@@ -52,7 +54,6 @@ static double s_phase;
 static int32_t s_prev;
 static int32_t s_curr;
 static bool s_primed;
-static bool s_irq_pending;
 
 static int16_t clamp16(int32_t value) {
     if (value < -32768) value = -32768;
