@@ -90,7 +90,7 @@ neogeorecomp/
 │   └── getting_started.md — how to recompile your first Neo Geo game
 ├── tools/
 │   └── disasm/            — 68000 disassembly and analysis helpers
-├── CMakeLists.txt
+├── Makefile              — Clang/C23/SDL3 build and ROM workflow
 └── LICENSE
 ```
 
@@ -106,20 +106,63 @@ neogeorecomp/
 
 ### Build Steps
 
+A normal clone is enough; `make` initializes the required Git submodules automatically.
+
 ```bash
 git clone https://github.com/Vulto/neogeorecomp.git
 cd neogeorecomp
 make
 ```
 
-This produces the native `neodriftout` executable. The build initializes the required Git submodules automatically when they are missing or stale.
+This produces the native `neodriftout` executable.
+
+### Neo Drift Out: ROM setup and run
+
+ROM data is **not** stored in this repository. Give the build a legally obtained Neo Drift Out ZIP and the Make workflow will extract only the eight ROM files required by the runtime, validate their sizes and SHA-256 hashes, and keep the extracted set under `build/roms/neodriftout`.
+
+The shortest workflow is:
+
+```bash
+make
+make run ROM="$HOME/downloads/neodrift.zip"
+```
+
+The ZIP can contain BIOS files and other ROMs; they are ignored. Only these files are prepared:
+
+```text
+000-lo.lo
+213-p1.p1
+213-s1.s1
+213-c1.c1
+213-c2.c2
+213-m1.m1
+213-v1.v1
+213-v2.v2
+```
+
+If the ROMs are already extracted:
+
+```bash
+make run ROM_DIR=/path/to/neodriftout-roms
+```
+
+To prepare without launching:
+
+```bash
+make prepare-rom ROM="$HOME/downloads/neodrift.zip"
+make romcheck
+```
+
+By default the prepared files go to `build/roms/neodriftout`. Override that with `ROM_DIR=/path/to/output`.
+
+The ROM checker is deterministic and validates every required file by size and SHA-256 before the native executable starts. The original ZIP and extracted ROM data remain local and are never uploaded by the build or CI.
 
 ## Game Projects Using This Runtime
 
 | Game | Developer | Year | Status | Repository |
 |------|-----------|------|--------|------------|
 | [Metal Slug: Super Vehicle-001](https://github.com/sp00nznet/metalslug) | Nazca Corporation | 1996 | Scaffolding | `sp00nznet/metalslug` |
-| [Neo Drift Out: New Technology](https://github.com/sp00nznet/neodriftout) | Visco Corporation | 1996 | **Rendering game text** | `sp00nznet/neodriftout` |
+| [Neo Drift Out: New Technology](https://github.com/sp00nznet/neodriftout) | Visco Corporation | 1996 | **Active native runtime validation** | `sp00nznet/neodriftout` |
 
 ### Neo Drift Out Status
 
