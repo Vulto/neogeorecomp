@@ -452,6 +452,8 @@ void bus_write16(uint32_t addr, uint16_t val) {
         s_reads_without_write = 0;
         /* Protect BIOS-owned $10FDAE/$10FDAF from game writes */
         if (addr == 0x10FDAE) return;
+        if (addr == 0x10041A && val == 0 && io_consume_start_event())
+            val = 1;
         write16_be(s_wram + (addr & 0xFFFF), val);
         return;
     }
