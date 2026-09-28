@@ -12,10 +12,20 @@ class ym2610_interface final : public ymfm::ymfm_interface {
 public:
     std::vector<uint8_t> vrom;
     int32_t timer_clocks[2] = { -1, -1 };
+    double busy_clocks = 0.0;
 
     void ymfm_set_timer(uint32_t tnum, int32_t duration_in_clocks) override {
         if (tnum < 2)
             timer_clocks[tnum] = duration_in_clocks;
+    }
+
+    void ymfm_set_busy_end(uint32_t clocks) override {
+        if ((double)clocks > busy_clocks)
+            busy_clocks = (double)clocks;
+    }
+
+    bool ymfm_is_busy() override {
+        return busy_clocks > 0.0;
     }
 
     void ymfm_update_irq(bool asserted) override {
@@ -24,6 +34,12 @@ public:
     }
 
     void advance_timers(double clocks) {
+        if (busy_clocks > 0.0) {
+            busy_clocks -= clocks;
+            if (busy_clocks < 0.0)
+                busy_clocks = 0.0;
+        }
+
         for (uint32_t tnum = 0; tnum < 2; tnum++) {
             if (timer_clocks[tnum] < 0)
                 continue;
@@ -77,6 +93,7 @@ extern "C" int ym2610_backend_init(int sample_rate) {
     s_primed = false;
     s_interface.timer_clocks[0] = -1;
     s_interface.timer_clocks[1] = -1;
+    s_interface.busy_clocks = 0.0;
     z80_set_irq(false);
     s_irq_pending = false;
     return s_chip_rate != 0 ? 0 : -1;
