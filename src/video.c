@@ -118,7 +118,13 @@ int video_load_srom(const char *srom_path) {
     fseek(f, 0, SEEK_SET);
     s_srom = (uint8_t *)malloc(s_srom_size);
     if (!s_srom) { fclose(f); return -1; }
-    fread(s_srom, 1, s_srom_size, f);
+    if (fread(s_srom, 1, s_srom_size, f) != s_srom_size) {
+        fclose(f);
+        free(s_srom);
+        s_srom = NULL;
+        s_srom_size = 0;
+        return -1;
+    }
     fclose(f);
     printf("[video] Loaded S ROM: %u bytes\n", s_srom_size);
     return 0;
@@ -132,7 +138,13 @@ int video_load_sfix(const char *sfix_path) {
     fseek(f, 0, SEEK_SET);
     s_sfix = (uint8_t *)malloc(s_sfix_size);
     if (!s_sfix) { fclose(f); return -1; }
-    fread(s_sfix, 1, s_sfix_size, f);
+    if (fread(s_sfix, 1, s_sfix_size, f) != s_sfix_size) {
+        fclose(f);
+        free(s_sfix);
+        s_sfix = NULL;
+        s_sfix_size = 0;
+        return -1;
+    }
     fclose(f);
     printf("[video] Loaded SFIX ROM: %u bytes\n", s_sfix_size);
     return 0;
