@@ -444,7 +444,38 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    uint8_t sprite_line_count[NEOGEO_SCREEN_HEIGHT] = {0};
+    enum { SpriteBitWords = (NEOGEO_MAX_SPRITES + 64) / 64 };
+    uint64_t sprite_scanline_mask[NEOGEO_SCREEN_HEIGHT][SpriteBitWords] = {{0}};
+
+    /*
+     * The hardware evaluates sprite entries in ascending sprite-number
+     * order for the per-scanline limit. Record the entries that survive
+     * first, then render them in reverse order for priority.
+     */
+    for (int spr = 0; spr <= NEOGEO_MAX_SPRITES; spr++) {
+        SpriteState *state = &sprites[spr];
+        if (!state->valid || state->height <= 0)
+            continue;
+        if (state->v_shrink == 0 || state->h_shrink == 0)
+            continue;
+
+        for (int sprite_line = 0; sprite_line < state->height * 16 && sprite_line < 512; sprite_line++) {
+            int py = (state->y + sprite_line) & 0x1FF;
+            if (py >= NEOGEO_SCREEN_HEIGHT)
+                continue;
+
+            uint64_t *mask = sprite_scanline_mask[py];
+            unsigned word = (unsigned)spr >> 6;
+            uint64_t bit = UINT64_C(1) << ((unsigned)spr & 63u);
+            unsigned count = 0;
+            for (unsigned i = 0; i < SpriteBitWords; i++)
+                count += (unsigned)__builtin_popcountll(mask[i]);
+
+            if (count >= NEOGEO_MAX_SCANLINE_SPRITES)
+                continue;
+            mask[word] |= bit;
+        }
+    }
 
     for (int spr = NEOGEO_MAX_SPRITES; spr >= 0; spr--) {
         SpriteState *state = &sprites[spr];
@@ -503,16 +534,10 @@ void video_render_frame(uint32_t *framebuffer) {
             if (py >= NEOGEO_SCREEN_HEIGHT)
                 continue;
 
-            /*
-             * LSPC can fetch at most 96 sprite entries on one scanline.
-             * The active sprite list is processed in sprite-number order;
-             * because we render in reverse priority order here, preserve the
-             * hardware-visible cutoff by counting each sprite entry before
-             * drawing its pixels.
-             */
-            if (sprite_line_count[py] >= NEOGEO_MAX_SCANLINE_SPRITES)
+            unsigned word = (unsigned)spr >> 6;
+            uint64_t bit = UINT64_C(1) << ((unsigned)spr & 63u);
+            if ((sprite_scanline_mask[py][word] & bit) == 0)
                 continue;
-            sprite_line_count[py]++;
 
             draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
                              h_flip, argb, framebuffer, state->h_shrink);
