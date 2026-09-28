@@ -12,7 +12,7 @@ files=$(find "$ROOT" -type f -name '*.c' -print)
 changed=0
 
 for file in $files; do
-    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b )' "$file" || true)
+    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.)' "$file" || true)
 
     if [ "$before" -eq 0 ]; then
         continue
@@ -36,9 +36,17 @@ for file in $files; do
         s{/\* TODO \$[0-9A-Fa-f]+: sbcd\.b d([0-7]), d([0-7])\s+\[[^]]+\] \*/}{M68K_SBCD8(g_m68k.d[$2], g_m68k.d[$1]);}g;
         s{/\* TODO \$[0-9A-Fa-f]+: nbcd\.b d([0-7])\s+\[[^]]+\] \*/}{M68K_NBCD8(g_m68k.d[$1]);}g;
         s{/\* TODO \$[0-9A-Fa-f]+: nbcd\.b \(a([0-7])\)\+\s+\[[^]]+\] \*/}{{ uint32_t _ea = g_m68k.a[$1]; uint8_t _tmp = bus_read8(_ea); M68K_NBCD8(_tmp); bus_write8(_ea, _tmp); g_m68k.a[$1] += 1; }}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.w \$([0-9A-Fa-f]+)\(a([0-7])\), d([0-7])\s+\[[^]]+\] \*/}{M68K_MOVEP16_MEM_TO_REG(g_m68k.d[$3], g_m68k.a[$2] + 0x$1);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.l \$([0-9A-Fa-f]+)\(a([0-7])\), d([0-7])\s+\[[^]]+\] \*/}{M68K_MOVEP32_MEM_TO_REG(g_m68k.d[$3], g_m68k.a[$2] + 0x$1);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.w -\$([0-9A-Fa-f]+)\(a([0-7])\), d([0-7])\s+\[[^]]+\] \*/}{M68K_MOVEP16_MEM_TO_REG(g_m68k.d[$3], g_m68k.a[$2] - 0x$1);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.l -\$([0-9A-Fa-f]+)\(a([0-7])\), d([0-7])\s+\[[^]]+\] \*/}{M68K_MOVEP32_MEM_TO_REG(g_m68k.d[$3], g_m68k.a[$2] - 0x$1);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.w d([0-7]), \$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP16_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] + 0x$2);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.l d([0-7]), \$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP32_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] + 0x$2);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.w d([0-7]), -\$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP16_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] - 0x$2);}g;
+        s{/\* TODO \$[0-9A-Fa-f]+: movep\.l d([0-7]), -\$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP32_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] - 0x$2);}g;
     ' "$file"
 
-    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b )' "$file" || true)
+    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.)' "$file" || true)
     if [ "$after" -ge "$before" ]; then
         echo "decomp patch: failed to replace ROX instructions in $file" >&2
         exit 1
