@@ -181,8 +181,7 @@ static void bios_vblank_process(void) {
     /* Start is a real input event on PC; mirror the BIOS edge into
      * the game-visible RAM locations without inventing timed presses. */
     if (p1_start) {
-        bus_write16(0x10FE80, 1);
-        bus_write16(0x10041A, 1);
+        io_queue_start();
         uint16_t sub = bus_read16(0x100426);
         if (bus_read8(0x10FDAE) == 2 && sub == 15)
             bus_write16(0x1011AE, 1);
@@ -329,7 +328,9 @@ int main(int argc, char *argv[]) {
     func_table_register(0x01229E, func_01229E);
     extern void func_012202(void);  /* Sprite allocator (with logging) */
     extern void func_01229E(void);  /* Sprite upload synchronization wrapper */
+    extern void func_015256(void);  /* Native sound queue producer */
     func_table_register(0x012202, func_012202);
+    func_table_register(0x015256, func_015256);
     func_table_register(0x011C78, func_011C78);
     func_table_register(0x011C88, func_011C88);
     func_table_register(0x011C98, func_011C98);
