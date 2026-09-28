@@ -84,18 +84,6 @@ void func_table_call(uint32_t addr) {
     neogeo_func_t func = func_table_lookup(addr);
     s_call_count++;
 
-    /* Time-based yield: if >20ms since last frame yield, force one.
-     * This catches any spin-wait pattern regardless of bus access. */
-    {
-        static uint64_t s_last_yield = 0;
-        uint64_t now = platform_get_ticks();
-        if (s_last_yield == 0) s_last_yield = now;
-        if (now - s_last_yield > 17) {  /* >17ms = ~60fps */
-            s_last_yield = now;
-            neogeo_frame_yield();
-        }
-    }
-
     /* Boot logging only */
     if (s_call_count <= 10) {
         fprintf(stderr, "[call #%u] $%06X %s\n", s_call_count, addr, func ? "OK" : "MISS");
