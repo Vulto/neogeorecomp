@@ -182,8 +182,8 @@ static void bios_vblank_process(void) {
      * MVS flow: a Start edge consumes one credit. AES does not require
      * a credit. Only then does the BIOS expose the game-start request.
      */
-    if (p1_start_edge && (credits != 0 || !s_config.mvs_mode)) {
-        if (!s_config.mvs_mode || io_consume_credit()) {
+    if (p1_start_edge && credits != 0) {
+        if (io_consume_credit()) {
             bus_write16(0x10FE80, 1);
             bus_write16(0x10041A, 1);
             uint16_t sub = bus_read16(0x100426);
