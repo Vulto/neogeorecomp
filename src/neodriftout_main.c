@@ -219,6 +219,8 @@ static void bios_hw_test(void) {
     bus_write32(0x10FDB0, 0);  /* No special hardware detected */
 }
 
+void neodriftout_register_missing_dispatch_targets(void);
+
 static void register_bios_stubs(void) {
     func_table_register(0xC00438, bios_vblank_default);
     func_table_register(0xC00444, bios_return_to_system);
@@ -321,6 +323,7 @@ int main(int argc, char *argv[]) {
 
     /* Register BIOS stubs first, then auto-generated game functions */
     register_bios_stubs();
+    neodriftout_register_missing_dispatch_targets();
     recomp_register_all();
 
     /*
