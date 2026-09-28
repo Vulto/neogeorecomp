@@ -516,6 +516,18 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        g_m68k.d[0] = 0x00000099u;
+        g_m68k.d[1] = 0x00000001u;
+        g_m68k.flag_x = false;
+        g_m68k.flag_z = true;
+        M68K_ABCD8(g_m68k.d[0], g_m68k.d[1]);
+        if ((uint8_t)g_m68k.d[0] != 0x00u ||
+            !g_m68k.flag_x || !g_m68k.flag_c) {
+            fprintf(stderr, "[neodriftout] self-test: ABCD8 failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
