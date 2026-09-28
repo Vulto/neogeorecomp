@@ -385,8 +385,8 @@ void video_render_frame(uint32_t *framebuffer) {
      *   3. Render fix layer on top (always visible, highest priority)
      */
 
-    const uint32_t *argb = palette_get_argb_table();
-    uint32_t backdrop = palette_get_backdrop();
+    const uint32_t *argb = s_shadow ? palette_get_shadow_argb_table() : palette_get_argb_table();
+    uint32_t backdrop = argb[NEOGEO_NUM_PALETTES * NEOGEO_COLORS_PER_PAL - 1];
 
     /* 1. Fill with backdrop */
     for (int i = 0; i < NEOGEO_SCREEN_WIDTH * NEOGEO_SCREEN_HEIGHT; i++) {
@@ -481,10 +481,7 @@ void video_render_frame(uint32_t *framebuffer) {
             continue;
         if (state->v_shrink == 0 || state->h_shrink == 0)
             continue;
-        if (!s_l0 || s_l0_size < 0x10000)
-            continue;
-
-        uint16_t scb1_base = (uint16_t)(spr * 64);
+                uint16_t scb1_base = (uint16_t)(spr * 64);
 
         for (int sprite_line = 0; sprite_line < state->height * 16 && sprite_line < 512; sprite_line++) {
             int zoom_line = sprite_line & 0xFF;
@@ -502,7 +499,22 @@ void video_render_frame(uint32_t *framebuffer) {
             if (invert)
                 zoom_line ^= 0xFF;
 
-            uint8_t l0 = s_l0[((uint32_t)state->v_shrink << 8) | (uint32_t)zoom_line];
+            uint8_t l0;
+            if (s_l0 && s_l0_size >= 0x10000) {
+                l0 = s_l0[((uint32_t)state->v_shrink << 8) | (uint32_t)zoom_line];
+            } else {
+                /*
+                 * L0 is a system ROM, not a cartridge ROM. Keep the renderer
+                 * functional when no dump is supplied by using proportional
+                 * nearest-line sampling as the fallback.
+                 */
+                uint32_t source_line =
+                    ((uint32_t)zoom_line * 256u) /
+                    ((uint32_t)state->v_shrink + 1u);
+                if (source_line > 255u)
+                    source_line = 255u;
+                l0 = (uint8_t)source_line;
+            }
             int tile_row = l0 >> 4;
             int source_y = l0 & 0x0F;
 
