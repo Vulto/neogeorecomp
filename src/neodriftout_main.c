@@ -181,8 +181,7 @@ static void bios_vblank_process(void) {
     /* Start is a real input event on PC; mirror the BIOS edge into
      * the game-visible RAM locations without inventing timed presses. */
     if (p1_start) {
-        bus_write16(0x10FE80, 1);
-        bus_write16(0x10041A, 1);
+        io_queue_start();
         uint16_t sub = bus_read16(0x100426);
         if (bus_read8(0x10FDAE) == 2 && sub == 15)
             bus_write16(0x1011AE, 1);
