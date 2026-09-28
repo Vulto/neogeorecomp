@@ -42,6 +42,9 @@ static uint32_t s_l0_size = 0;
 static bool s_use_bios_fix = true;   /* Fix layer source selection */
 static bool s_shadow = false;        /* Shadow/darken mode */
 static uint8_t s_auto_anim_counter = 0;  /* Auto-animation frame counter */
+static uint8_t s_auto_anim_speed = 0;
+static uint8_t s_auto_anim_frame_counter = 0;
+static bool s_auto_anim_disabled = false;
 
 /* ----- Initialization ----- */
 
@@ -51,6 +54,9 @@ int video_init(void) {
     s_vram_mod = 1;  /* Default auto-increment */
     s_lspc_mode = 0;
     s_auto_anim_counter = 0;
+    s_auto_anim_speed = 0;
+    s_auto_anim_frame_counter = 0;
+    s_auto_anim_disabled = false;
     return 0;
 }
 
@@ -218,6 +224,8 @@ void video_set_vram_mod(uint16_t mod) {
 
 void video_set_lspc_mode(uint16_t mode) {
     s_lspc_mode = mode;
+    s_auto_anim_speed = (uint8_t)(mode >> 8);
+    s_auto_anim_disabled = (mode & 0x0008u) != 0;
 }
 
 uint16_t video_get_lspc_mode(void) {
@@ -574,8 +582,14 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    /* Increment auto-animation counter (increments every 8 frames) */
-    s_auto_anim_counter++;
+    if (!s_auto_anim_disabled) {
+        if (s_auto_anim_frame_counter == 0) {
+            s_auto_anim_frame_counter = s_auto_anim_speed;
+            s_auto_anim_counter++;
+        } else {
+            s_auto_anim_frame_counter--;
+        }
+    }
 }
 
 /* ----- Fix Layer Control ----- */
