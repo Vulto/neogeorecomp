@@ -24,25 +24,16 @@ static uint8_t s_active_bank = 0;
 /* ----- Color Conversion ----- */
 
 uint32_t palette_neo_to_argb(uint16_t neo_color) {
-    uint8_t dark = (uint8_t)(neo_color >> 15);
     uint8_t r5 = (uint8_t)(((neo_color >> 14) & 0x01u) | ((neo_color >> 7) & 0x1Eu));
     uint8_t g5 = (uint8_t)(((neo_color >> 13) & 0x01u) | ((neo_color >> 3) & 0x1Eu));
     uint8_t b5 = (uint8_t)(((neo_color >> 12) & 0x01u) | ((neo_color << 1) & 0x1Eu));
 
-    /*
-     * The hardware uses resistor-weighted 5-bit channels plus a common
-     * dark bit. Expand the 5-bit component to 8-bit here; the dark bit is
-     * retained as the least-significant contribution.
-     */
+    /* Bit 15 selects the hardware dark/reference encoding; the normal
+     * RGB conversion uses the five component bits below. */
     uint8_t r8 = (uint8_t)((r5 << 3) | (r5 >> 2));
     uint8_t g8 = (uint8_t)((g5 << 3) | (g5 >> 2));
     uint8_t b8 = (uint8_t)((b5 << 3) | (b5 >> 2));
 
-    if (dark) {
-        if (r8 < 255) r8++;
-        if (g8 < 255) g8++;
-        if (b8 < 255) b8++;
-    }
 
     return 0xFF000000u | ((uint32_t)r8 << 16) | ((uint32_t)g8 << 8) | b8;
 }
