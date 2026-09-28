@@ -185,7 +185,22 @@ static void bios_vblank_process(void) {
      */
     if (p1_start_edge && credits != 0) {
         if (io_consume_credit()) {
-            io_queue_start();
+            ym2610_reset();
+        ym2610_write(0, 0x24, 0x03);
+        ym2610_write(1, 0xFF, 0);
+        ym2610_write(0, 0x27, 0x05);
+        {
+            int16_t audio_test[2] = {0, 0};
+            ym2610_generate(audio_test, 1);
+        }
+        if (!ym2610_irq_pending()) {
+            fprintf(stderr, "[neodriftout] self-test: YM2610 Timer A IRQ failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        ym2610_reset();
+
+        io_queue_start();
             bus_write16(0x10FE80, 1);
             uint16_t sub = bus_read16(0x100426);
             if (bus_read8(0x10FDAE) == 2 && sub == 15)
