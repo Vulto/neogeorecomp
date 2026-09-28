@@ -827,6 +827,7 @@ void m68k_set_sr(uint16_t sr);
     g_m68k.flag_z = (_d == 0); \
     g_m68k.flag_n = (_d & 0x80000000u) != 0; \
     (dst) = _d; \
+    if (_cnt == 0) g_m68k.flag_c = g_m68k.flag_x; \
 } while(0)
 
 /* --- SWAP: swap upper and lower words of data register --- */
