@@ -89,9 +89,6 @@ build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
 debug: CFLAGS += -g -O0
 debug: clean all
 
-test: neodriftout
-	@echo "Neo Drift Out build smoke test passed."
-
 romcheck:
 	@test -n "$(ROM_DIR)" || (echo "usage: make romcheck ROM_DIR=/path/to/roms" >&2; exit 2)
 	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
