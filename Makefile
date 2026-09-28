@@ -63,9 +63,19 @@ else
 
 .PHONY: all runtime neodriftout test
 
-all runtime neodriftout test:
-	@git submodule update --init --recursive
+# Make submodule initialization idempotent. If a previous interrupted clone left
+# a non-empty worktree behind, re-use and repair that worktree instead of trying
+# to clone over it.
+SUBMODULE_READY_STAMP := .git/submodules-ready
+
+all runtime neodriftout test: $(SUBMODULE_READY_STAMP)
 	@$(MAKE) SUBMODULES_READY=1 $@
+
+$(SUBMODULE_READY_STAMP): .gitmodules
+	@git submodule sync --recursive
+	@git submodule update --init --recursive
+	@mkdir -p $(@D)
+	@touch $@
 
 endif
 
