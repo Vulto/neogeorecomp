@@ -1084,6 +1084,22 @@ static inline void m68k_bftst_memory(uint32_t address, int offset, unsigned widt
     bus_write8(_ea + 6, (uint8_t)_v); \
 } while(0)
 
+/* --- ABCD: packed BCD add with extend --- */
+#define M68K_ABCD8(dst, src) do { \
+    uint8_t _d = (uint8_t)(dst); \
+    uint8_t _s = (uint8_t)(src); \
+    int _lo = (int)(_d & 0x0F) + (int)(_s & 0x0F) + (g_m68k.flag_x ? 1 : 0); \
+    int _carry = 0; \
+    if (_lo > 9) { _lo -= 10; _carry = 1; } \
+    int _hi = (int)((_d >> 4) & 0x0F) + (int)((_s >> 4) & 0x0F) + _carry; \
+    int _decimal_carry = 0; \
+    if (_hi > 9) { _hi -= 10; _decimal_carry = 1; } \
+    uint8_t _res = (uint8_t)((_hi << 4) | _lo); \
+    g_m68k.flag_c = g_m68k.flag_x = (_decimal_carry != 0); \
+    if (_res != 0) g_m68k.flag_z = false; \
+    (dst) = ((dst) & 0xFFFFFF00u) | _res; \
+} while(0)
+
 /* --- SBCD/NBCD: packed BCD subtract with extend --- */
 #define M68K_SBCD8(dst, src) do { \
     uint8_t _d = (uint8_t)(dst); \
