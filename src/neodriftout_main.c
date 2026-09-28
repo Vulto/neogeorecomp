@@ -141,8 +141,8 @@ static void bios_vblank_process(void) {
     /* BIOS_STATCURNT uses Start/Select order, positive logic. */
     status_current |= (uint8_t)((((uint8_t)~status_raw) >> 1) & 0x01);
     status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x01) << 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) >> 3) & 0x04);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) >> 1) & 0x08);
+    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x08) >> 1);
+    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x04) << 1);
 
     static uint8_t prev_p1;
     static uint8_t prev_p2;
