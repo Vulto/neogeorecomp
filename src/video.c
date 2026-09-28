@@ -465,8 +465,6 @@ void video_render_frame(uint32_t *framebuffer) {
         SpriteState *state = &sprites[spr];
         if (!state->valid || state->height <= 0)
             continue;
-        if (state->v_shrink == 0 || state->h_shrink == 0)
-            continue;
 
         for (int sprite_line = 0; sprite_line < state->height * 16 && sprite_line < 512; sprite_line++) {
             int py = (state->y + sprite_line) & 0x1FF;
