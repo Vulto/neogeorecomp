@@ -31,9 +31,9 @@ RuntimeSources := \
 	third_party/ymfm/src/ymfm_ssg.cpp \
 	third_party/ymfm/src/ymfm_adpcm.cpp
 
-RuntimeObjects := $(RuntimeSources:%.c=build/%.o)
+RuntimeCObjects := $(patsubst %.c,build/%.o,$(filter %.c,$(RuntimeSources)))
 RuntimeCxxSources := $(filter %.cpp,$(RuntimeSources))
-RuntimeCxxObjects := $(RuntimeCxxSources:%.cpp=build/%.o)
+RuntimeCxxObjects := $(patsubst %.cpp,build/%.o,$(RuntimeCxxSources))
 
 GameSources := \
 	src/neodriftout_main.c \
@@ -57,7 +57,7 @@ neodriftout: $(RuntimeLibrary) $(GameObjects)
 	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
 
 test: neodriftout
-	@echo "Neo Drift Out build smoke test passed."
+	@SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy NEOGEO_HEADLESS=1 ./neodriftout --self-test
 
 else
 
@@ -80,9 +80,9 @@ $(SUBMODULE_READY_STAMP): .gitmodules
 
 endif
 
-$(RuntimeLibrary): $(RuntimeObjects) $(RuntimeCxxObjects)
+$(RuntimeLibrary): $(RuntimeCObjects) $(RuntimeCxxObjects)
 	@mkdir -p $(@D)
-	$(AR) rcs $@ $(RuntimeObjects) $(RuntimeCxxObjects)
+	$(AR) rcs $@ $(RuntimeCObjects) $(RuntimeCxxObjects)
 
 build/%.o: %.c
 	@mkdir -p $(@D)
@@ -92,11 +92,37 @@ build/%.o: %.cpp
 	@mkdir -p $(@D)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
-build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_autogen -Dfunc_000B34=func_000B34_upstream
-build/games/neodriftout/recomp/overrides.o: CFLAGS += -Dfunc_01229E=func_01229E_upstream
-build/games/neodriftout/src/autorecomp/recomp_010100_012252.o: CFLAGS += -Dsub_012036=sub_012036_upstream
+build/games/neodriftout/recomp/gameplay.o: override CFLAGS += -Dfunc_000CC6=func_000CC6_autogen -Dfunc_000B34=func_000B34_upstream
 
-build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
+# The generated recomp header contains a legacy non-UTF-8 dash in a comment.
+# Keep strict warnings for project C while scoping this suppression to the
+# translation unit that includes that generated header.
+build/src/neodriftout_main.o: override CFLAGS += -Wno-invalid-utf8
+
+# The game submodule is generated recompilation output maintained upstream.
+# Keep its warnings visible without allowing them to block this repository's
+# strict compilation gate.
+build/games/neodriftout/%.o: override CFLAGS += -Wno-error=unused-variable
+
+# Auto-generated recompilation C has legacy labels and a non-UTF-8 comment
+# produced by the upstream generator. These diagnostics are scoped to the
+# generated translation units only.
+build/games/neodriftout/src/autorecomp/%.o: override CFLAGS += -Wno-invalid-utf8 -Wno-unused-label -Wno-error=unused-variable
+build/games/neodriftout/recomp/overrides.o: override CFLAGS += -Dfunc_01229E=func_01229E_upstream
+build/games/neodriftout/src/autorecomp/recomp_010100_012252.o: override CFLAGS += -Dsub_012036=sub_012036_upstream
+build/games/neodriftout/src/autorecomp/recomp_010100_012252.o: override CFLAGS += -Wno-invalid-utf8 -Wno-unused-label -Wno-error=unused-variable
+
+build/third_party/z80/z80.o: override CFLAGS += -Dz80_init=z80_core_init
+
+# YMFM is third-party code and intentionally contains no-op virtual hooks
+# whose unused parameters trigger -Werror under Clang. Keep -Werror for the
+# project while scoping this suppression to the vendored YMFM translation
+# units (including our adapter that includes YMFM headers).
+build/src/ym2610_backend.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_opn.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_misc.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_ssg.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_adpcm.o: override CXXFLAGS += -Wno-unused-parameter
 
 debug: CFLAGS += -g -O0
 debug: clean all

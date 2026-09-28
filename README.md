@@ -81,7 +81,7 @@ neogeorecomp/
 │   ├── ym2610.h           — YM2610 sound chip interface
 │   ├── z80.h              — Z80 audio CPU, NMI communication, bank switching
 │   ├── timer.h            — interrupt system, VBlank, timer, watchdog
-│   ├── platform.h         — SDL2 windowing, input mapping, audio output
+│   ├── platform.h         — SDL3 windowing, input mapping, audio output
 │   └── debug.h            — tracing, breakpoints, memory inspection
 ├── src/                   — implementation files matching each header
 ├── docs/
@@ -112,7 +112,7 @@ cd neogeorecomp
 make
 ```
 
-This produces `libneogeorecomp.a` (or `.lib` on Windows) — a static library that game-specific recomp projects link against.
+This produces the native `neodriftout` executable. The build initializes the required Git submodules automatically when they are missing or stale.
 
 ## Game Projects Using This Runtime
 
@@ -121,9 +121,11 @@ This produces `libneogeorecomp.a` (or `.lib` on Windows) — a static library th
 | [Metal Slug: Super Vehicle-001](https://github.com/sp00nznet/metalslug) | Nazca Corporation | 1996 | Scaffolding | `sp00nznet/metalslug` |
 | [Neo Drift Out: New Technology](https://github.com/sp00nznet/neodriftout) | Visco Corporation | 1996 | **Rendering game text** | `sp00nznet/neodriftout` |
 
-### Neo Drift Out Progress
+### Neo Drift Out Status
 
-Neo Drift Out is the first game to render through this runtime. The complete 2 MB P ROM has been statically recompiled into **6,636 C functions** (~115K lines) using an automated 68k-to-C pipeline. The game boots, runs its state machine, loads palettes from ROM, and renders fix layer text through the S ROM tile decoder.
+The repository contains a native executable target and a deterministic runtime self-test. The self-test does not use game ROM data: it starts SDL3 in headless mode, initializes the runtime, registers the generated function table, and verifies representative function-dispatch, Work RAM, and palette operations.
+
+A successful self-test is a build/runtime sanity check; it is **not** evidence that the game itself boots correctly. Game execution requires the complete validated Neo Drift Out ROM set.
 
 ![Neo Drift Out Screenshot](https://raw.githubusercontent.com/sp00nznet/neodriftout/master/docs/screenshot_proof_of_life.png)
 
