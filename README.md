@@ -98,17 +98,18 @@ neogeorecomp/
 
 ### Prerequisites
 
-- **CMake** 3.20+
-- **C17-compatible compiler** (MSVC 2022, Clang 14+, or GCC 12+)
-- **SDL2** development libraries
+- Clang
+- LLVM
+- GNU Make
+- SDL3 development libraries
+- Git
 
 ### Build Steps
 
 ```bash
-git clone https://github.com/sp00nznet/neogeorecomp.git
+git clone https://github.com/Vulto/neogeorecomp.git
 cd neogeorecomp
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+make
 ```
 
 This produces `libneogeorecomp.a` (or `.lib` on Windows) — a static library that game-specific recomp projects link against.
@@ -222,7 +223,7 @@ Open an issue or PR. Let's make Neo Geo games run natively everywhere.
 
 ### Validating a ROM set
 
-The native runtime does not require ROM data to be committed to this repository. To validate a locally dumped Neo Drift Out set before running the executable:
+The build automatically initializes the required Git submodules when they are missing. The native runtime does not require ROM data to be committed to this repository. To validate a locally dumped Neo Drift Out set before running the executable:
 
 ```bash
 make romcheck ROM_DIR=/path/to/roms

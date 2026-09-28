@@ -46,12 +46,27 @@ GameObjects := $(GameSources:%.c=build/%.o)
 
 .PHONY: all clean test debug runtime neodriftout romcheck run
 
+ifeq ($(SUBMODULES_READY),1)
+
 all: neodriftout
 
 runtime: $(RuntimeLibrary)
 
 neodriftout: $(RuntimeLibrary) $(GameObjects)
 	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
+
+test: neodriftout
+	@echo "Neo Drift Out build smoke test passed."
+
+else
+
+.PHONY: all runtime neodriftout test
+
+all runtime neodriftout test:
+	@git submodule update --init --recursive
+	@$(MAKE) SUBMODULES_READY=1 $@
+
+endif
 
 $(RuntimeLibrary): $(RuntimeObjects) $(RuntimeCxxObjects)
 	@mkdir -p $(@D)
@@ -73,9 +88,6 @@ build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
 
 debug: CFLAGS += -g -O0
 debug: clean all
-
-test: neodriftout
-	@echo "Neo Drift Out build smoke test passed."
 
 romcheck:
 	@test -n "$(ROM_DIR)" || (echo "usage: make romcheck ROM_DIR=/path/to/roms" >&2; exit 2)
