@@ -26,6 +26,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang llvm make libsdl3-dev
 
+      - name: Simulate stale submodule worktrees
+        run: |
+          set -eu
+          for path in games/neodriftout third_party/z80 third_party/ymfm; do
+            rm -rf "$path"
+            mkdir -p "$path"
+            printf 'stale non-empty worktree\\n' > "$path/.stale"
+          done
+
       - name: Clean build
         run: make clean
 
