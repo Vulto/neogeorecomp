@@ -446,6 +446,7 @@ void video_render_frame(uint32_t *framebuffer) {
 
     enum { SpriteBitWords = (NEOGEO_MAX_SPRITES + 64) / 64 };
     uint64_t sprite_scanline_mask[NEOGEO_SCREEN_HEIGHT][SpriteBitWords] = {{0}};
+    uint16_t sprite_scanline_count[NEOGEO_SCREEN_HEIGHT] = {0};
 
     /*
      * The hardware evaluates sprite entries in ascending sprite-number
@@ -464,16 +465,13 @@ void video_render_frame(uint32_t *framebuffer) {
             if (py >= NEOGEO_SCREEN_HEIGHT)
                 continue;
 
-            uint64_t *mask = sprite_scanline_mask[py];
+            if (sprite_scanline_count[py] >= NEOGEO_MAX_SCANLINE_SPRITES)
+                continue;
+
             unsigned word = (unsigned)spr >> 6;
             uint64_t bit = UINT64_C(1) << ((unsigned)spr & 63u);
-            unsigned count = 0;
-            for (unsigned i = 0; i < SpriteBitWords; i++)
-                count += (unsigned)__builtin_popcountll(mask[i]);
-
-            if (count >= NEOGEO_MAX_SCANLINE_SPRITES)
-                continue;
-            mask[word] |= bit;
+            sprite_scanline_mask[py][word] |= bit;
+            sprite_scanline_count[py]++;
         }
     }
 
