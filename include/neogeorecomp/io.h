@@ -64,6 +64,9 @@ void io_set_button(int player, uint8_t button, bool pressed);
 
 /* Coin/service */
 void io_insert_coin(int slot);   /* slot: 0-3 */
+void io_clear_coin_inputs(void);
+uint8_t io_get_credits(void);
+bool io_consume_credit(void);
 void io_press_service(void);
 
 /* ----- Register Reads (called by bus layer) ----- */
