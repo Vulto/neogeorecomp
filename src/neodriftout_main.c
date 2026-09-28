@@ -184,8 +184,8 @@ static void bios_vblank_process(void) {
      */
     if (p1_start_edge && credits != 0) {
         if (io_consume_credit()) {
+            io_queue_start();
             bus_write16(0x10FE80, 1);
-            bus_write16(0x10041A, 1);
             uint16_t sub = bus_read16(0x100426);
             if (bus_read8(0x10FDAE) == 2 && sub == 15)
                 bus_write16(0x1011AE, 1);
