@@ -576,6 +576,20 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        io_queue_start();
+        bus_write16(0x10041A, 0);
+        if (bus_read16(0x10041A) != 1) {
+            fprintf(stderr, "[neodriftout] self-test: queued Start event was lost\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x10041A, 0);
+        if (bus_read16(0x10041A) != 0) {
+            fprintf(stderr, "[neodriftout] self-test: queued Start event was not consumed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
