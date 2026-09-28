@@ -416,7 +416,7 @@ void video_render_frame(uint32_t *framebuffer) {
      * performed in reverse order afterwards so lower sprite numbers have
      * higher priority.
      */
-    for (int spr = 1; spr <= NEOGEO_MAX_SPRITES; spr++) {
+    for (int spr = 0; spr <= NEOGEO_MAX_SPRITES; spr++) {
         uint16_t scb3 = s_vram[0x8200 + spr];
         uint16_t scb4 = s_vram[0x8400 + spr];
         uint16_t scb2 = s_vram[0x8000 + spr];
@@ -436,7 +436,7 @@ void video_render_frame(uint32_t *framebuffer) {
         sprites[spr].h_shrink = (uint8_t)((scb2 >> 8) & 0x0F);
         sprites[spr].valid = height != 0;
 
-        if (sticky && sprites[spr - 1].valid) {
+        if (sticky && spr > 0 && sprites[spr - 1].valid) {
             sprites[spr].x = (sprites[spr - 1].x + 16) & 0x1FF;
             sprites[spr].y = sprites[spr - 1].y;
             sprites[spr].height = sprites[spr - 1].height;
@@ -444,7 +444,7 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    for (int spr = NEOGEO_MAX_SPRITES; spr >= 1; spr--) {
+    for (int spr = NEOGEO_MAX_SPRITES; spr >= 0; spr--) {
         SpriteState *state = &sprites[spr];
         if (!state->valid || state->height <= 0)
             continue;
