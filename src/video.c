@@ -444,6 +444,8 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
+    uint8_t sprite_line_count[NEOGEO_SCREEN_HEIGHT] = {0};
+
     for (int spr = NEOGEO_MAX_SPRITES; spr >= 0; spr--) {
         SpriteState *state = &sprites[spr];
         if (!state->valid || state->height <= 0)
@@ -500,6 +502,19 @@ void video_render_frame(uint32_t *framebuffer) {
             int py = (state->y + sprite_line) & 0x1FF;
             if (py >= NEOGEO_SCREEN_HEIGHT)
                 continue;
+
+            /*
+             * LSPC can fetch at most 96 sprite entries on one scanline.
+             * The active sprite list is processed in sprite-number order;
+             * because we render in reverse priority order here, preserve the
+             * hardware-visible cutoff by counting each sprite entry before
+             * drawing its pixels.
+             */
+            if (sprite_line == 0 || source_y == 0) {
+                if (sprite_line_count[py] >= NEOGEO_MAX_SCANLINE_SPRITES)
+                    continue;
+                sprite_line_count[py]++;
+            }
 
             draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
                              h_flip, argb, framebuffer, state->h_shrink);
