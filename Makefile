@@ -150,7 +150,7 @@ prepare-rom:
 romcheck:
 	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
 
-decomp-audit:
+decomp-audit: $(DECOMP_STAMP)
 	@sh tools/audit_neodriftout_decomp.sh
 
 prepare: neodriftout
