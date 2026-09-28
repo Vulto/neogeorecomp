@@ -112,8 +112,8 @@ extern "C" void ym2610_backend_reset(void) {
 
     s_chip->reset();
     s_phase = 0.0;
-    s_prev = 0;
-    s_curr = 0;
+    s_prev[0] = s_prev[1] = 0;
+    s_curr[0] = s_curr[1] = 0;
     s_primed = false;
     s_interface.timer_clocks[0] = -1;
     s_interface.timer_clocks[1] = -1;
