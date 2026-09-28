@@ -24,6 +24,7 @@ static uint8_t s_dipsw = 0xFF;        /* DIP switch state */
 static bool s_mvs_mode = true;
 static int s_region = 0;              /* 0=Japan, 1=USA, 2=Europe */
 static uint8_t s_coin_counters = 0xFF; /* Coin inputs (active low) */
+static bool s_start_pending = false;
 
 /* ----- Initialization ----- */
 
@@ -35,6 +36,7 @@ int io_init(bool mvs_mode, int region) {
     s_mvs_mode = mvs_mode;
     s_region = region;
     s_coin_counters = 0xFF;
+    s_start_pending = false;
     printf("[io] Mode: %s, Region: %d\n", mvs_mode ? "MVS" : "AES", region);
     return 0;
 }
@@ -44,6 +46,16 @@ void io_shutdown(void) {
 }
 
 /* ----- Input State ----- */
+
+void io_queue_start(void) {
+    s_start_pending = true;
+}
+
+bool io_consume_start_event(void) {
+    bool pending = s_start_pending;
+    s_start_pending = false;
+    return pending;
+}
 
 void io_update(void) {
     /* Called once per frame — input is polled by the platform layer
