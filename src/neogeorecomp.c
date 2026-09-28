@@ -23,6 +23,7 @@ static neogeo_config_t s_config;
 static bool s_initialized = false;
 static bool s_frame_active = false;
 static neogeo_func_t s_vblank_func = NULL;
+static neogeo_func_t s_timer_func = NULL;
 
 /* 320x224 ARGB8888 framebuffer */
 static uint32_t s_framebuffer[NEOGEO_SCREEN_WIDTH * NEOGEO_SCREEN_HEIGHT];
@@ -140,6 +141,7 @@ void neogeo_run(void) {
     /* Find the game's key entry points */
     neogeo_func_t user_func = func_table_lookup(0x00068C);    /* USER routine */
     neogeo_func_t vblank_func = func_table_lookup(0x00022C);  /* VBlank handler */
+    neogeo_func_t timer_func = func_table_lookup(0x0002AA);    /* Timer IRQ2 handler */
 
     if (user_func) {
         printf("[neogeorecomp] USER routine at $00068C: found\n");
@@ -179,6 +181,7 @@ void neogeo_run(void) {
 
     /* Store VBlank handler globally so the frame hook can call it */
     s_vblank_func = vblank_func;
+    s_timer_func = timer_func;
     s_frame_active = true;
 
     /* Call USER — for State 0, this sets up init and returns to BIOS.
@@ -236,10 +239,19 @@ void neogeo_shutdown(void) {
 
 /* ----- Frame Yield (called by game's spin-wait loops) ----- */
 
+static void neogeo_run_timer_frame(void) {
+    for (int scanline = 0; scanline < 264; scanline++) {
+        timer_tick_scanline();
+        if (timer_timer_pending() && s_timer_func)
+            s_timer_func();
+    }
+}
+
 static int s_frame_count = 0;
 
 bool neogeo_frame_yield(void) {
     neogeo_begin_frame();
+    neogeo_run_timer_frame();
 
     /* Fire the VBlank handler — this uploads VRAM/palette/sprites
      * and sets the frame-ready flag ($100424 = 1) */
