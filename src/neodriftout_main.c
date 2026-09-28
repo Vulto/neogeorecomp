@@ -613,10 +613,11 @@ int main(int argc, char *argv[]) {
             ym2610_generate(audio_test, 2);
             ym2610_write(1, 0, 0x05);
 
-            ym2610_generate(audio_test, 1);
+            ym2610_generate(audio_test, 4);
         }
-        if (!ym2610_irq_pending()) {
-            fprintf(stderr, "[neodriftout] self-test: YM2610 Timer A IRQ failed\\n");
+        uint8_t ym2610_status = ym2610_read(0);
+        if ((ym2610_status & 0x04) == 0 || !ym2610_irq_pending()) {
+            fprintf(stderr, "[neodriftout] self-test: YM2610 Timer A IRQ failed (status=%02X)\\n", ym2610_status);
             neogeo_shutdown();
             return 1;
         }
