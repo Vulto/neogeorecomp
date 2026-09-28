@@ -528,6 +528,40 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        bus_write8(0x100410, 0x12);
+        bus_write8(0x100420, 0x12);
+        g_m68k.a[0] = 0x100410;
+        g_m68k.a[1] = 0x100420;
+        {
+            uint8_t _src = bus_read8(g_m68k.a[0]);
+            uint8_t _dst = bus_read8(g_m68k.a[1]);
+            g_m68k.a[0] += 1;
+            g_m68k.a[1] += 1;
+            M68K_CMP8(_dst, _src);
+        }
+        if (!g_m68k.flag_z || g_m68k.a[0] != 0x100411 ||
+            g_m68k.a[1] != 0x100421) {
+            fprintf(stderr, "[neodriftout] self-test: CMPM8 failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        bus_write8(0x100430, 0x12);
+        bus_write8(0x100432, 0x13);
+        g_m68k.a[7] = 0x100430;
+        {
+            uint8_t _src = bus_read8(g_m68k.a[7]);
+            uint8_t _dst = bus_read8(0x100432);
+            g_m68k.a[7] += 2;
+            M68K_CMP8(_dst, _src);
+        }
+        if (g_m68k.flag_n || g_m68k.flag_z || g_m68k.flag_c ||
+            g_m68k.a[7] != 0x100432) {
+            fprintf(stderr, "[neodriftout] self-test: CMPM8 A7 increment failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
