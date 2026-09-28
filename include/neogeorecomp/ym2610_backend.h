@@ -2,6 +2,7 @@
 #define NEOGEORECOMP_YM2610_BACKEND_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
