@@ -12,7 +12,7 @@ files=$(find "$ROOT" -type f -name '*.c' -print)
 changed=0
 
 for file in $files; do
-    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.|bftst |abcd\.b )' "$file" || true)
+    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(?:\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" || true)
 
     if [ "$before" -eq 0 ]; then
         continue
@@ -50,7 +50,7 @@ for file in $files; do
         s{/\* TODO \$[0-9A-Fa-f]+: abcd\.b -\(a([0-7])\), -\(a([0-7])\)\s+\[[^]]+\] \*/}{{ g_m68k.a[$1] -= 1; uint8_t _src = bus_read8(g_m68k.a[$1]); g_m68k.a[$2] -= 1; uint8_t _dst = bus_read8(g_m68k.a[$2]); M68K_ABCD8(_dst, _src); bus_write8(g_m68k.a[$2], _dst); }}g;
     ' "$file"
 
-    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.|bftst |abcd\.b )' "$file" || true)
+    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(?:\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" || true)
     if [ "$after" -ge "$before" ]; then
         echo "decomp patch: failed to replace ROX instructions in $file" >&2
         exit 1
