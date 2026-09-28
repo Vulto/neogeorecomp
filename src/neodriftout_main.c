@@ -6,6 +6,7 @@
  *
  * ROM files expected in --rom-path directory (supports both MAME and
  * alternate naming conventions):
+ *   000-lo.lo                         Sprite vertical shrink lookup (64 KiB used)
  *   drift_p1.rom OR 213-p1.p1    68000 program code (2 MB)
  *   drift_s1.rom OR 213-s1.s1    Fix layer tiles (128 KB)
  *   drift_c1.rom OR 213-c1.c1    Sprite tiles (4 MB)
@@ -253,6 +254,11 @@ static int load_roms(void) {
     if (try_open("drift_c2.rom", "213-c2.c2", c2, sizeof(c2)) != 0) return -1;
     const char *crom_paths[] = { c1, c2 };
     rc = video_load_crom(crom_paths, 2);
+    if (rc != 0) return rc;
+
+    /* L0 is the system sprite shrink lookup used by the LSPC. */
+    if (try_open("000-lo.lo", NULL, path, sizeof(path)) != 0) return -1;
+    rc = video_load_l0(path);
     if (rc != 0) return rc;
 
     /* M ROM — Z80 audio program */
