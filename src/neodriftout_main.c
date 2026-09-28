@@ -555,7 +555,7 @@ int main(int argc, char *argv[]) {
             g_m68k.a[7] += 2;
             M68K_CMP8(_dst, _src);
         }
-        if (!g_m68k.flag_n || g_m68k.flag_z || !g_m68k.flag_c ||
+        if (g_m68k.flag_n || g_m68k.flag_z || g_m68k.flag_c ||
             g_m68k.a[7] != 0x100432) {
             fprintf(stderr, "[neodriftout] self-test: CMPM8 A7 increment failed\n");
             neogeo_shutdown();
