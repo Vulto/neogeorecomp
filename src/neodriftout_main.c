@@ -16,6 +16,7 @@
  */
 
 #include <neogeorecomp/neogeorecomp.h>
+#include <neogeorecomp/io.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -167,24 +168,32 @@ static void bios_vblank_process(void) {
     prev_p1 = p1;
     prev_p2 = p2;
 
-    /* Start/Select from STATUS_B (active low):
-     * Bit 1 = P1 Start, Bit 0 = P1 Select
-     * Bit 3 = P2 Start, Bit 2 = P2 Select */
-    /* STATUS_B bit 1 = P1 Start (active low) */
+    /* STATUS_B bit 1 = P1 Start, active low. */
+    static uint8_t prev_status = 0xFF;
     uint8_t p1_start = ((~status) >> 1) & 1;
-    bus_write8(0x10FD8A, p1_start);
-    bus_write8(0x10FD8C, p1_start);  /* Credit/coin status */
-    bus_write8(0x10FD98, status);     /* Raw status_b for start/select */
+    uint8_t p1_start_edge = p1_start & ((prev_status >> 1) & 1);
+    uint8_t credits = io_get_credits();
 
-    /* Start is a real input event on PC; mirror the BIOS edge into
-     * the game-visible RAM locations without inventing timed presses. */
-    if (p1_start) {
-        bus_write16(0x10FE80, 1);
-        bus_write16(0x10041A, 1);
-        uint16_t sub = bus_read16(0x100426);
-        if (bus_read8(0x10FDAE) == 2 && sub == 15)
-            bus_write16(0x1011AE, 1);
+    bus_write8(0x10FD8A, p1_start);
+    bus_write8(0x10FD8C, credits);
+    bus_write8(0x10FD98, status);
+
+    /*
+     * MVS flow: a Start edge consumes one credit. AES does not require
+     * a credit. Only then does the BIOS expose the game-start request.
+     */
+    if (p1_start_edge && credits != 0) {
+        if (io_consume_credit()) {
+            bus_write16(0x10FE80, 1);
+            bus_write16(0x10041A, 1);
+            uint16_t sub = bus_read16(0x100426);
+            if (bus_read8(0x10FDAE) == 2 && sub == 15)
+                bus_write16(0x1011AE, 1);
+        }
     }
+
+    prev_status = status;
+    io_clear_coin_inputs();
 
 }
 
