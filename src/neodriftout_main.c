@@ -498,6 +498,13 @@ int main(int argc, char *argv[]) {
         }
         for (int frame = 0; frame < 7; frame++)
             bios_vblank_process();
+        if (bus_read8(0x10FD98) != 0 ||
+            bus_read8(0x10FD99) != 1) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS repeat period failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bios_vblank_process();
         if (bus_read8(0x10FD98) != 0x01 ||
             bus_read8(0x10FD99) != 8) {
             fprintf(stderr, "[neodriftout] self-test: BIOS repeat period failed\\n");
