@@ -172,7 +172,6 @@ static void bios_vblank_process(void) {
     bus_write8(0x10FEDD, status_change);
 
     uint8_t credits = io_get_credits();
-    uint8_t p1_start = status_current & 0x01;
     uint8_t p1_start_edge = status_change & 0x01;
 
     /*
