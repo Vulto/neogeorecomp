@@ -483,6 +483,29 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        bus_write8(0x100200, 0x12);
+        bus_write8(0x100202, 0x34);
+        bus_write8(0x100204, 0x56);
+        bus_write8(0x100206, 0x78);
+        g_m68k.d[0] = 0;
+        M68K_MOVEP32_MEM_TO_REG(g_m68k.d[0], 0x100200);
+        if (g_m68k.d[0] != 0x12345678u) {
+            fprintf(stderr, "[neodriftout] self-test: MOVEP32 read failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        g_m68k.d[0] = 0xA1B2C3D4u;
+        M68K_MOVEP32_REG_TO_MEM(g_m68k.d[0], 0x100200);
+        if (bus_read8(0x100200) != 0xA1 ||
+            bus_read8(0x100202) != 0xB2 ||
+            bus_read8(0x100204) != 0xC3 ||
+            bus_read8(0x100206) != 0xD4) {
+            fprintf(stderr, "[neodriftout] self-test: MOVEP32 write failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
