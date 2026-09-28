@@ -39,6 +39,8 @@ void io_shutdown(void);
  * Called once per frame by the main loop.
  */
 void io_update(void);
+void io_queue_start(void);
+bool io_consume_start_event(void);
 
 /*
  * Set the state of a controller button.
