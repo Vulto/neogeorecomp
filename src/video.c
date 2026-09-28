@@ -510,11 +510,9 @@ void video_render_frame(uint32_t *framebuffer) {
              * hardware-visible cutoff by counting each sprite entry before
              * drawing its pixels.
              */
-            if (sprite_line == 0 || source_y == 0) {
-                if (sprite_line_count[py] >= NEOGEO_MAX_SCANLINE_SPRITES)
-                    continue;
-                sprite_line_count[py]++;
-            }
+            if (sprite_line_count[py] >= NEOGEO_MAX_SCANLINE_SPRITES)
+                continue;
+            sprite_line_count[py]++;
 
             draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
                              h_flip, argb, framebuffer, state->h_shrink);
