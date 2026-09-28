@@ -44,17 +44,29 @@ GameSources := \
 
 GameObjects := $(GameSources:%.c=build/%.o)
 
-.PHONY: all clean test debug runtime neodriftout romcheck run check-submodules
+.PHONY: all clean test debug runtime neodriftout romcheck run
+
+ifeq ($(SUBMODULES_READY),1)
 
 all: neodriftout
 
-check-submodules:
-	@git submodule update --init --recursive
+runtime: $(RuntimeLibrary)
 
-runtime: check-submodules $(RuntimeLibrary)
-
-neodriftout: check-submodules $(RuntimeLibrary) $(GameObjects)
+neodriftout: $(RuntimeLibrary) $(GameObjects)
 	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
+
+test: neodriftout
+	@echo "Neo Drift Out build smoke test passed."
+
+else
+
+.PHONY: all runtime neodriftout test
+
+all runtime neodriftout test:
+	@git submodule update --init --recursive
+	@$(MAKE) SUBMODULES_READY=1 $@
+
+endif
 
 $(RuntimeLibrary): $(RuntimeObjects) $(RuntimeCxxObjects)
 	@mkdir -p $(@D)
