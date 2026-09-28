@@ -55,4 +55,4 @@ for file in $files; do
     changed=$((changed + before - after))
 done
 
-echo "decomp patch: replaced $changed Neo Drift Out ROXR/ROXL instructions"
+echo "decomp patch: replaced $changed missing Neo Drift Out instructions"
