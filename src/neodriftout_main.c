@@ -597,6 +597,32 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        ym2610_reset();
+        {
+            int16_t audio_test[4] = {0, 0, 0, 0};
+
+            ym2610_write(0, 0x25, 0);
+            ym2610_generate(audio_test, 2);
+            ym2610_write(1, 0, 0x03);
+
+            ym2610_write(0, 0x24, 0);
+            ym2610_generate(audio_test, 2);
+            ym2610_write(1, 0, 0xFF);
+
+            ym2610_write(0, 0x27, 0);
+            ym2610_generate(audio_test, 2);
+            ym2610_write(1, 0, 0x05);
+
+            ym2610_generate(audio_test, 4);
+        }
+        uint8_t ym2610_status = ym2610_read(0);
+        if ((ym2610_status & 0x01) == 0 || !ym2610_irq_pending()) {
+            fprintf(stderr, "[neodriftout] self-test: YM2610 Timer A IRQ failed (status=%02X)\\n", ym2610_status);
+            neogeo_shutdown();
+            return 1;
+        }
+        ym2610_reset();
+
         io_queue_start();
         bus_write16(0x10041A, 0);
         if (bus_read16(0x10041A) != 1) {
