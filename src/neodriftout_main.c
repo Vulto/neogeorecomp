@@ -159,7 +159,6 @@ static void bios_vblank_process(void) {
 
     /* Edge detection: active-high bits for newly pressed buttons */
     static uint8_t prev_p1 = 0xFF, prev_p2 = 0xFF;
-    static uint8_t prev_status = 0xFF;
     uint8_t p1_edge = ~p1 & prev_p1;
     uint8_t p2_edge = ~p2 & prev_p2;
     bus_write8(0x10FD95, p1_edge);
@@ -187,7 +186,6 @@ static void bios_vblank_process(void) {
             bus_write16(0x1011AE, 1);
     }
 
-    prev_status = status;
 }
 
 /* $C004C2 — BIOS: clear fix layer */
