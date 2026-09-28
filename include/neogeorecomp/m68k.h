@@ -781,6 +781,53 @@ void m68k_set_sr(uint16_t sr);
     (dst) = _d; \
 } while(0)
 
+/* --- ROXR/ROXL: rotate through extend --- */
+#define M68K_ROXR32(dst, count) do { \
+    uint8_t _cnt = (uint8_t)(count) & 63; \
+    uint32_t _d = (uint32_t)(dst); \
+    if (_cnt != 0) { \
+        _cnt %= 33; \
+        if (_cnt != 0) { \
+            uint32_t _x = g_m68k.flag_x ? 1u : 0u; \
+            uint32_t _last = 0; \
+            for (uint8_t _i = 0; _i < _cnt; _i++) { \
+                _last = _d & 1u; \
+                _d = (_d >> 1) | (_x << 31); \
+                _x = _last; \
+            } \
+            g_m68k.flag_c = (_last != 0); \
+            g_m68k.flag_x = (_last != 0); \
+        } \
+    } \
+    g_m68k.flag_v = false; \
+    g_m68k.flag_z = (_d == 0); \
+    g_m68k.flag_n = (_d & 0x80000000u) != 0; \
+    (dst) = _d; \
+} while(0)
+
+#define M68K_ROXL32(dst, count) do { \
+    uint8_t _cnt = (uint8_t)(count) & 63; \
+    uint32_t _d = (uint32_t)(dst); \
+    if (_cnt != 0) { \
+        _cnt %= 33; \
+        if (_cnt != 0) { \
+            uint32_t _x = g_m68k.flag_x ? 1u : 0u; \
+            uint32_t _last = 0; \
+            for (uint8_t _i = 0; _i < _cnt; _i++) { \
+                _last = (_d >> 31) & 1u; \
+                _d = (_d << 1) | _x; \
+                _x = _last; \
+            } \
+            g_m68k.flag_c = (_last != 0); \
+            g_m68k.flag_x = (_last != 0); \
+        } \
+    } \
+    g_m68k.flag_v = false; \
+    g_m68k.flag_z = (_d == 0); \
+    g_m68k.flag_n = (_d & 0x80000000u) != 0; \
+    (dst) = _d; \
+} while(0)
+
 /* --- SWAP: swap upper and lower words of data register --- */
 #define M68K_SWAP(dst) do { \
     uint32_t _d = (uint32_t)(dst); \
