@@ -45,7 +45,7 @@ For a deeper dive into the theory and practice of static recompilation, see the 
 │  └──────────┘ └──────────┘ └──────────┘ └───────────┘  │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌───────────┐  │
 │  │palette.h │ │  z80.h   │ │ timer.h  │ │ platform.h│  │
-│  │ 2-bank   │ │ audio CPU│ │ IRQ/VBL  │ │   SDL2    │  │
+│  │ 2-bank   │ │ audio CPU│ │ IRQ/VBL  │ │   SDL3    │  │
 │  │ 4096 col │ │ 4 MHz    │ │ watchdog │ │  window   │  │
 │  └──────────┘ └──────────┘ └──────────┘ └───────────┘  │
 └─────────────────────────────────────────────────────────┘
@@ -189,6 +189,30 @@ The repository contains a native executable target and a deterministic runtime s
 A successful self-test is a build/runtime sanity check; it is **not** evidence that the game itself boots correctly. Game execution requires the complete validated Neo Drift Out ROM set.
 
 ![Neo Drift Out Screenshot](https://raw.githubusercontent.com/sp00nznet/neodriftout/master/docs/screenshot_proof_of_life.png)
+
+## Neo Drift Out decompilation pipeline
+
+The generated Neo Drift Out C is kept as the upstream game submodule. Local, reproducible decomp patches are applied automatically during the build so the public repository does not vendor the generated source.
+
+The current patch stage restores 68000 `ROXR.L` and `ROXL.L` instructions that the upstream generated output currently marks as `TODO`. The replacement uses the real 68000 rotate-through-extend semantics, including the X and C flags. Motorola documents register rotate counts as modulo 64 and the operation as a 33-bit rotation for long operands. citeturn2search12turn2search7
+
+Run the patch stage explicitly with:
+
+```bash
+make decomp-patch
+```
+
+It is also run automatically before Neo Drift Out game objects are compiled.
+
+After changing or adding decomp coverage, run:
+
+```bash
+make clean
+make
+make decomp-audit
+```
+
+The audit reports remaining generated TODO instructions. A lower TODO count is useful progress, but only instructions exercised by the game runtime are considered functionally validated.
 
 ## Neo Drift Out decompilation coverage
 
