@@ -51,8 +51,8 @@ static ymfm::ym2610 *s_chip;
 static int s_sample_rate = 48000;
 static uint32_t s_chip_rate;
 static double s_phase;
-static int32_t s_prev;
-static int32_t s_curr;
+static int32_t s_prev[2];
+static int32_t s_curr[2];
 static bool s_primed;
 
 static int16_t clamp16(int32_t value) {
@@ -70,8 +70,8 @@ extern "C" int ym2610_backend_init(int sample_rate) {
     s_sample_rate = sample_rate > 0 ? sample_rate : 48000;
     s_chip_rate = s_chip->sample_rate(8000000);
     s_phase = 0.0;
-    s_prev = 0;
-    s_curr = 0;
+    s_prev[0] = s_prev[1] = 0;
+    s_curr[0] = s_curr[1] = 0;
     s_primed = false;
     s_interface.timer_clocks[0] = -1;
     s_interface.timer_clocks[1] = -1;
@@ -137,8 +137,11 @@ extern "C" void ym2610_backend_generate(int16_t *buffer, int num_samples) {
     if (!s_primed) {
         ymfm::ym2610::output_data sample;
         s_chip->generate(&sample);
-        s_curr = (sample.data[0] + sample.data[1]) / 2;
-        s_prev = s_curr;
+        s_curr[0] = sample.data[0];
+        s_curr[1] = sample.data[1];
+        s_prev[0] = s_curr[0];
+        s_prev[1] = s_curr[1];
+        s_interface.advance_timers(8000000.0 / (double)s_chip_rate);
         s_primed = true;
     }
 
@@ -146,19 +149,24 @@ extern "C" void ym2610_backend_generate(int16_t *buffer, int num_samples) {
 
     for (int i = 0; i < num_samples; i++) {
         while (s_phase >= 1.0) {
-            s_prev = s_curr;
+            s_prev[0] = s_curr[0];
+            s_prev[1] = s_curr[1];
 
             ymfm::ym2610::output_data sample;
             s_chip->generate(&sample);
-            s_curr = (sample.data[0] + sample.data[1]) / 2;
+            s_curr[0] = sample.data[0];
+            s_curr[1] = sample.data[1];
+            s_interface.advance_timers(8000000.0 / (double)s_chip_rate);
 
             s_phase -= 1.0;
         }
 
-        const double value = (double)s_prev + ((double)(s_curr - s_prev) * s_phase);
-        const int16_t pcm = clamp16((int32_t)value);
-        buffer[i * 2 + 0] = pcm;
-        buffer[i * 2 + 1] = pcm;
+        const double left =
+            (double)s_prev[0] + ((double)(s_curr[0] - s_prev[0]) * s_phase);
+        const double right =
+            (double)s_prev[1] + ((double)(s_curr[1] - s_prev[1]) * s_phase);
+        buffer[i * 2 + 0] = clamp16((int32_t)left);
+        buffer[i * 2 + 1] = clamp16((int32_t)right);
 
         s_phase += step;
     }
