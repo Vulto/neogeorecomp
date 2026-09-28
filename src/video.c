@@ -42,6 +42,9 @@ static uint32_t s_l0_size = 0;
 static bool s_use_bios_fix = true;   /* Fix layer source selection */
 static bool s_shadow = false;        /* Shadow/darken mode */
 static uint8_t s_auto_anim_counter = 0;  /* Auto-animation frame counter */
+static uint8_t s_auto_anim_speed = 0;
+static uint8_t s_auto_anim_frame_counter = 0;
+static bool s_auto_anim_disabled = false;
 
 /* ----- Initialization ----- */
 
@@ -51,6 +54,9 @@ int video_init(void) {
     s_vram_mod = 1;  /* Default auto-increment */
     s_lspc_mode = 0;
     s_auto_anim_counter = 0;
+    s_auto_anim_speed = 0;
+    s_auto_anim_frame_counter = 0;
+    s_auto_anim_disabled = false;
     return 0;
 }
 
@@ -218,6 +224,8 @@ void video_set_vram_mod(uint16_t mod) {
 
 void video_set_lspc_mode(uint16_t mode) {
     s_lspc_mode = mode;
+    s_auto_anim_speed = (uint8_t)(mode >> 8);
+    s_auto_anim_disabled = (mode & 0x0008u) != 0;
 }
 
 uint16_t video_get_lspc_mode(void) {
@@ -385,8 +393,8 @@ void video_render_frame(uint32_t *framebuffer) {
      *   3. Render fix layer on top (always visible, highest priority)
      */
 
-    const uint32_t *argb = palette_get_argb_table();
-    uint32_t backdrop = palette_get_backdrop();
+    const uint32_t *argb = s_shadow ? palette_get_shadow_argb_table() : palette_get_argb_table();
+    uint32_t backdrop = argb[NEOGEO_NUM_PALETTES * NEOGEO_COLORS_PER_PAL - 1];
 
     /* 1. Fill with backdrop */
     for (int i = 0; i < NEOGEO_SCREEN_WIDTH * NEOGEO_SCREEN_HEIGHT; i++) {
@@ -481,10 +489,7 @@ void video_render_frame(uint32_t *framebuffer) {
             continue;
         if (state->v_shrink == 0 || state->h_shrink == 0)
             continue;
-        if (!s_l0 || s_l0_size < 0x10000)
-            continue;
-
-        uint16_t scb1_base = (uint16_t)(spr * 64);
+                uint16_t scb1_base = (uint16_t)(spr * 64);
 
         for (int sprite_line = 0; sprite_line < state->height * 16 && sprite_line < 512; sprite_line++) {
             int zoom_line = sprite_line & 0xFF;
@@ -502,7 +507,22 @@ void video_render_frame(uint32_t *framebuffer) {
             if (invert)
                 zoom_line ^= 0xFF;
 
-            uint8_t l0 = s_l0[((uint32_t)state->v_shrink << 8) | (uint32_t)zoom_line];
+            uint8_t l0;
+            if (s_l0 && s_l0_size >= 0x10000) {
+                l0 = s_l0[((uint32_t)state->v_shrink << 8) | (uint32_t)zoom_line];
+            } else {
+                /*
+                 * L0 is a system ROM, not a cartridge ROM. Keep the renderer
+                 * functional when no dump is supplied by using proportional
+                 * nearest-line sampling as the fallback.
+                 */
+                uint32_t source_line =
+                    ((uint32_t)zoom_line * 256u) /
+                    ((uint32_t)state->v_shrink + 1u);
+                if (source_line > 255u)
+                    source_line = 255u;
+                l0 = (uint8_t)source_line;
+            }
             int tile_row = l0 >> 4;
             int source_y = l0 & 0x0F;
 
@@ -542,28 +562,35 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    /* 3. Render fix layer (always on top) */
-    /* Fix layer: 40 columns x 32 rows of 8x8 tiles at VRAM $7000 */
-    /* Visible area: 40 x 28 tiles (NTSC), stored top-to-bottom, left-to-right */
+    /* 3. Render fix layer (always on top).
+     * The 40x32 map has two hidden rows above and below the NTSC window.
+     * Visible screen row 0 maps to VRAM row 2. */
+    enum { FixVisibleRows = 28, FixVisibleRowOffset = 2 };
     for (int col = 0; col < NEOGEO_FIX_COLS; col++) {
-        for (int row = 0; row < NEOGEO_FIX_ROWS; row++) {
-            uint16_t fix_entry = s_vram[0x7000 + col * NEOGEO_FIX_ROWS + row];
+        for (int row = 0; row < FixVisibleRows; row++) {
+            int map_row = row + FixVisibleRowOffset;
+            uint16_t fix_entry = s_vram[0x7000 + col * NEOGEO_FIX_ROWS + map_row];
 
             uint16_t tile_num = fix_entry & 0x0FFF;
             uint8_t palette_idx = (fix_entry >> 12) & 0x0F;
 
-            if (tile_num == 0) continue;  /* Empty tile */
+            if (tile_num == 0) continue;
 
             int px = col * 8;
             int py = row * 8;
 
-            /* Only first 16 palettes available for fix layer */
             decode_fix_tile(tile_num, palette_idx, px, py, argb, framebuffer);
         }
     }
 
-    /* Increment auto-animation counter (increments every 8 frames) */
-    s_auto_anim_counter++;
+    if (!s_auto_anim_disabled) {
+        if (s_auto_anim_frame_counter == 0) {
+            s_auto_anim_frame_counter = s_auto_anim_speed;
+            s_auto_anim_counter++;
+        } else {
+            s_auto_anim_frame_counter--;
+        }
+    }
 }
 
 /* ----- Fix Layer Control ----- */

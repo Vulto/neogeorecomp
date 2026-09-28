@@ -6,6 +6,7 @@
  *
  * ROM files expected in --rom-path directory (supports both MAME and
  * alternate naming conventions):
+ *   000-lo.lo                         Sprite vertical shrink lookup (64 KiB used)
  *   drift_p1.rom OR 213-p1.p1    68000 program code (2 MB)
  *   drift_s1.rom OR 213-s1.s1    Fix layer tiles (128 KB)
  *   drift_c1.rom OR 213-c1.c1    Sprite tiles (4 MB)
@@ -255,6 +256,11 @@ static int load_roms(void) {
     rc = video_load_crom(crom_paths, 2);
     if (rc != 0) return rc;
 
+    /* L0 is the system sprite shrink lookup used by the LSPC. */
+    if (try_open("000-lo.lo", NULL, path, sizeof(path)) != 0) return -1;
+    rc = video_load_l0(path);
+    if (rc != 0) return rc;
+
     /* M ROM — Z80 audio program */
     if (try_open("drift_m1.rom", "213-m1.m1", path, sizeof(path)) != 0) return -1;
     rc = z80_load_mrom(path);
@@ -425,6 +431,21 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "[neodriftout] self-test: palette round-trip failed\n");
             neogeo_shutdown();
             return 1;
+        }
+        if (palette_neo_to_argb(0x8000) != 0xFF000000u) {
+            fprintf(stderr, "[neodriftout] self-test: palette black conversion failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        palette_write(1, 0x4F00);
+        {
+            const uint32_t *normal = palette_get_argb_table();
+            const uint32_t *shadow = palette_get_shadow_argb_table();
+            if (normal[1] == 0xFF000000u || shadow[1] >= normal[1]) {
+                fprintf(stderr, "[neodriftout] self-test: palette shadow conversion failed\n");
+                neogeo_shutdown();
+                return 1;
+            }
         }
 
         g_m68k.d[0] = 0x80000000u;
