@@ -286,8 +286,8 @@ void neogeo_trigger_vblank(void) {
     /* Render the current VRAM state to the framebuffer */
     video_render_frame(s_framebuffer);
 
-    /* Run the Z80 for one frame (~67,614 cycles at 4 MHz / 59.19 Hz) */
-    z80_execute(67614);
+    /* Run the Z80 for one frame: 4 MHz / 59.185606 Hz = 67,584 cycles. */
+    z80_execute(67584);
 
     /* Generate audio */
     ym2610_generate(s_audio_buffer, AUDIO_SAMPLES_PER_FRAME);
