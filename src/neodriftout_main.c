@@ -426,6 +426,21 @@ int main(int argc, char *argv[]) {
             neogeo_shutdown();
             return 1;
         }
+        if (palette_neo_to_argb(0x8000) != 0xFF000000u) {
+            fprintf(stderr, "[neodriftout] self-test: palette black conversion failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        palette_write(1, 0x4F00);
+        {
+            const uint32_t *normal = palette_get_argb_table();
+            const uint32_t *shadow = palette_get_shadow_argb_table();
+            if (normal[1] == 0xFF000000u || shadow[1] >= normal[1]) {
+                fprintf(stderr, "[neodriftout] self-test: palette shadow conversion failed\n");
+                neogeo_shutdown();
+                return 1;
+            }
+        }
 
         g_m68k.d[0] = 0x80000000u;
         g_m68k.flag_x = true;
