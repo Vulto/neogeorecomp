@@ -423,6 +423,19 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        bios_vblank_process();
+        io_set_button(0, 0x01, true);
+        bios_vblank_process();
+        if (bus_read8(0x10FD94) != 1 ||
+            bus_read8(0x10FD96) != 0x01 ||
+            bus_read8(0x10FD97) != 0x01) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS input RAM mapping failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_button(0, 0x01, false);
+        bios_vblank_process();
+
         palette_write(0, 0x7FFF);
         if (palette_read(0) != 0x7FFF) {
             fprintf(stderr, "[neodriftout] self-test: palette round-trip failed\n");
