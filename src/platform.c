@@ -18,11 +18,14 @@ static SDL_Texture *s_texture = NULL;
 static SDL_AudioStream *s_audio_stream = NULL;
 
 static bool s_fullscreen = false;
+static bool s_headless = false;
 static uint64_t s_frame_start = 0;
 
 #define FRAME_TIME_US 16896
 
 int platform_init(int window_scale, bool fullscreen, bool vsync) {
+    const char *headless = getenv("NEOGEO_HEADLESS");
+    s_headless = headless && strcmp(headless, "1") == 0;
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMEPAD)) {
         fprintf(stderr, "[platform] SDL_Init failed: %s\n", SDL_GetError());
         return -1;
@@ -103,6 +106,9 @@ void platform_shutdown(void) {
 }
 
 void platform_present(const uint32_t *framebuffer) {
+    if (s_headless)
+        return;
+
     SDL_UpdateTexture(
         s_texture,
         NULL,
@@ -213,6 +219,9 @@ void platform_audio_queue(const int16_t *samples, int num_samples) {
 }
 
 void platform_frame_sync(void) {
+    if (s_headless)
+        return;
+
     uint64_t freq = SDL_GetPerformanceFrequency();
     uint64_t target = s_frame_start + (freq * FRAME_TIME_US / 1000000);
     uint64_t now;
