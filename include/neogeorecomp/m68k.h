@@ -1024,6 +1024,36 @@ void m68k_set_sr(uint16_t sr);
     (dst) = _res; \
 } while(0)
 
+/* --- SBCD/NBCD: packed BCD subtract with extend --- */
+#define M68K_SBCD8(dst, src) do { \
+    uint8_t _d = (uint8_t)(dst); \
+    uint8_t _s = (uint8_t)(src); \
+    int _lo = (int)(_d & 0x0F) - (int)(_s & 0x0F) - (g_m68k.flag_x ? 1 : 0); \
+    int _borrow = 0; \
+    if (_lo < 0) { _lo += 10; _borrow = 1; } \
+    int _hi = (int)((_d >> 4) & 0x0F) - (int)((_s >> 4) & 0x0F) - _borrow; \
+    int _decimal_borrow = 0; \
+    if (_hi < 0) { _hi += 10; _decimal_borrow = 1; } \
+    uint8_t _res = (uint8_t)((_hi << 4) | _lo); \
+    g_m68k.flag_c = g_m68k.flag_x = (_decimal_borrow != 0); \
+    if (_res != 0) g_m68k.flag_z = false; \
+    (dst) = ((dst) & 0xFFFFFF00u) | _res; \
+} while(0)
+
+#define M68K_NBCD8(dst) do { \
+    uint8_t _d = (uint8_t)(dst); \
+    int _lo = -(int)(_d & 0x0F) - (g_m68k.flag_x ? 1 : 0); \
+    int _borrow = 0; \
+    if (_lo < 0) { _lo += 10; _borrow = 1; } \
+    int _hi = -(int)((_d >> 4) & 0x0F) - _borrow; \
+    int _decimal_borrow = 0; \
+    if (_hi < 0) { _hi += 10; _decimal_borrow = 1; } \
+    uint8_t _res = (uint8_t)((_hi << 4) | _lo); \
+    g_m68k.flag_c = g_m68k.flag_x = (_decimal_borrow != 0); \
+    if (_res != 0) g_m68k.flag_z = false; \
+    (dst) = ((dst) & 0xFFFFFF00u) | _res; \
+} while(0)
+
 /* --- MOVE: dst = src, update NZ, clear CV (for data moves only) --- */
 #define M68K_MOVE8(dst, src) do { \
     uint8_t _v = (uint8_t)(src); \

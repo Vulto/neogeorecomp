@@ -449,6 +449,40 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        g_m68k.d[0] = 0x00000000u;
+        g_m68k.d[1] = 0x00000001u;
+        g_m68k.flag_x = false;
+        g_m68k.flag_z = true;
+        M68K_SBCD8(g_m68k.d[0], g_m68k.d[1]);
+        if ((uint8_t)g_m68k.d[0] != 0x99u ||
+            !g_m68k.flag_x || !g_m68k.flag_c) {
+            fprintf(stderr, "[neodriftout] self-test: SBCD8 failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        g_m68k.d[0] = 0x00000000u;
+        g_m68k.flag_x = false;
+        g_m68k.flag_z = true;
+        M68K_NBCD8(g_m68k.d[0]);
+        if ((uint8_t)g_m68k.d[0] != 0x00u ||
+            g_m68k.flag_x || g_m68k.flag_c) {
+            fprintf(stderr, "[neodriftout] self-test: NBCD8 zero failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        g_m68k.d[0] = 0x00000001u;
+        g_m68k.flag_x = false;
+        g_m68k.flag_z = true;
+        M68K_NBCD8(g_m68k.d[0]);
+        if ((uint8_t)g_m68k.d[0] != 0x99u ||
+            !g_m68k.flag_x || !g_m68k.flag_c) {
+            fprintf(stderr, "[neodriftout] self-test: NBCD8 failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
