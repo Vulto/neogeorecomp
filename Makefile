@@ -67,12 +67,20 @@ else
 # a non-empty worktree behind, re-use and repair that worktree instead of trying
 # to clone over it.
 SUBMODULE_READY_STAMP := .git/submodules-ready
+SUBMODULE_PATHS := games/neodriftout third_party/z80 third_party/ymfm
 
 all runtime neodriftout test: $(SUBMODULE_READY_STAMP)
 	@$(MAKE) SUBMODULES_READY=1 $@
 
 $(SUBMODULE_READY_STAMP): .gitmodules
 	@git submodule sync --recursive
+	@for path in $(SUBMODULE_PATHS); do \
+		if [ -d "$path" ] && [ ! -e "$path/.git" ]; then \
+			git config --get-regexp "^submodule\.$path\." >/dev/null 2>&1 || true; \
+			git rm -f --cached "$path" >/dev/null 2>&1 || true; \
+			rm -rf "$path"; \
+		fi; \
+	done
 	@git submodule update --init --recursive
 	@mkdir -p $(@D)
 	@touch $@
