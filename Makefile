@@ -37,6 +37,7 @@ RuntimeCxxObjects := $(RuntimeCxxSources:%.cpp=build/%.o)
 
 GameSources := \
 	src/neodriftout_main.c \
+	src/neodriftout_palette_override.c \
 	src/neodriftout_runtime_overrides.c \
 	$(wildcard games/neodriftout/recomp/*.c) \
 	$(wildcard games/neodriftout/src/autorecomp/*.c)
@@ -66,6 +67,7 @@ build/%.o: %.cpp
 
 build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_autogen
 build/games/neodriftout/recomp/overrides.o: CFLAGS += -Dfunc_01229E=func_01229E_upstream
+build/games/neodriftout/src/autorecomp/recomp_010100_012252.o: CFLAGS += -Dsub_012036=sub_012036_upstream
 
 build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
 
