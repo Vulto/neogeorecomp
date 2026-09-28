@@ -184,8 +184,8 @@ static void bios_vblank_process(void) {
      */
     if (p1_start_edge && credits != 0) {
         if (io_consume_credit()) {
+            io_queue_start();
             bus_write16(0x10FE80, 1);
-            bus_write16(0x10041A, 1);
             uint16_t sub = bus_read16(0x100426);
             if (bus_read8(0x10FDAE) == 2 && sub == 15)
                 bus_write16(0x1011AE, 1);
@@ -572,6 +572,20 @@ int main(int argc, char *argv[]) {
         if (g_m68k.flag_n || g_m68k.flag_z || g_m68k.flag_c ||
             g_m68k.a[7] != 0x100432) {
             fprintf(stderr, "[neodriftout] self-test: CMPM8 A7 increment failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        io_queue_start();
+        bus_write16(0x10041A, 0);
+        if (bus_read16(0x10041A) != 1) {
+            fprintf(stderr, "[neodriftout] self-test: queued Start event was lost\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x10041A, 0);
+        if (bus_read16(0x10041A) != 0) {
+            fprintf(stderr, "[neodriftout] self-test: queued Start event was not consumed\n");
             neogeo_shutdown();
             return 1;
         }

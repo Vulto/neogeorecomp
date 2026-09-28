@@ -25,6 +25,7 @@ static bool s_mvs_mode = true;
 static int s_region = 0;              /* 0=Japan, 1=USA, 2=Europe */
 static uint8_t s_coin_counters = 0xFF; /* Coin inputs (active low) */
 static uint8_t s_credits = 0;
+static bool s_start_pending = false;
 
 /* ----- Initialization ----- */
 
@@ -37,6 +38,7 @@ int io_init(bool mvs_mode, int region) {
     s_region = region;
     s_coin_counters = 0xFF;
     s_credits = 0;
+    s_start_pending = false;
     printf("[io] Mode: %s, Region: %d\n", mvs_mode ? "MVS" : "AES", region);
     return 0;
 }
@@ -100,6 +102,16 @@ bool io_consume_credit(void) {
 
 void io_press_service(void) {
     /* Service button — active low, momentary */
+}
+
+void io_queue_start(void) {
+    s_start_pending = true;
+}
+
+bool io_consume_start_event(void) {
+    bool pending = s_start_pending;
+    s_start_pending = false;
+    return pending;
 }
 
 /* ----- Register Reads ----- */
