@@ -461,11 +461,6 @@ void bus_write16(uint32_t addr, uint16_t val) {
         s_reads_without_write = 0;
         /* Protect BIOS-owned $10FDAE/$10FDAF from game writes */
         if (addr == 0x10FDAE) return;
-        /* Debug: trace writes to sprite attribute flag ($101B20 + n*$16) */
-        if (addr == 0x101B20 && val != 0) {
-            fprintf(stderr, "[SPR-FLAG] $%06X = $%04X !!\n", addr, val);
-            fflush(stderr);
-        }
         write16_be(s_wram + (addr & 0xFFFF), val);
         return;
     }
