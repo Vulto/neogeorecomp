@@ -31,6 +31,10 @@ for file in $files; do
         s{/\* TODO \$[0-9A-Fa-f]+: roxl\.b d([0-7]), d([0-7])\s+\[[^]]+\] \*/\s*(?:\n\s*M68K_OR8\(g_m68k\.d\[1\], g_m68k\.d\[0\]\);)?}{M68K_ROXL8(g_m68k.d[$2], g_m68k.d[$1]);}g;
         s{/\* TODO \$[0-9A-Fa-f]+: roxl\.w d([0-7]), d([0-7])\s+\[[^]]+\] \*/\s*(?:\n\s*M68K_OR8\(g_m68k\.d\[1\], g_m68k\.d\[0\]\);)?}{M68K_ROXL16(g_m68k.d[$2], g_m68k.d[$1]);}g;
         s{/\* TODO \$[0-9A-Fa-f]+: roxl\.l d([0-7]), d([0-7])\s+\[[^]]+\] \*/\s*(?:\n\s*M68K_OR8\(g_m68k\.d\[1\], g_m68k\.d\[0\]\);)?}{M68K_ROXL32(g_m68k.d[$2], g_m68k.d[$1]);}g;
+        s{/\* TODO \$00AA00: roxr\.w \(a2\)\s+\[[^]]+\] \*/}{{ uint32_t _ea = g_m68k.a[2]; uint16_t _tmp = bus_read16(_ea); M68K_ROXR16(_tmp, 1); bus_write16(_ea, _tmp); }}g;
+        s{/\* TODO \$00AA04: roxr\.w \(a4\)\+\s+\[[^]]+\] \*/}{{ uint32_t _ea = g_m68k.a[4]; uint16_t _tmp = bus_read16(_ea); M68K_ROXR16(_tmp, 1); bus_write16(_ea, _tmp); g_m68k.a[4] += 2; }}g;
+        s{/\* TODO \$00AA08: roxr\.w -\(a7\)\s+\[[^]]+\] \*/}{{ g_m68k.a[7] -= 2; uint16_t _tmp = bus_read16(g_m68k.a[7]); M68K_ROXR16(_tmp, 1); bus_write16(g_m68k.a[7], _tmp); }}g;
+        s{/\* TODO \$00AA0C: roxr\.w \(a2, d4\.w\)\s+\[[^]]+\] \*/}{{ uint32_t _ea = g_m68k.a[2] + (int16_t)(uint16_t)g_m68k.d[4]; uint16_t _tmp = bus_read16(_ea); M68K_ROXR16(_tmp, 1); bus_write16(_ea, _tmp); }}g;
         s{/\* TODO \$[0-9A-Fa-f]+: roxr\.w \$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{{ uint32_t _ea = (g_m68k.a[$2] + 0x$1); uint16_t _tmp = bus_read16(_ea); M68K_ROXR16(_tmp, 1); bus_write16(_ea, _tmp); }}g;
         s{/\* TODO \$[0-9A-Fa-f]+: roxl\.w \$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{{ uint32_t _ea = (g_m68k.a[$2] + 0x$1); uint16_t _tmp = bus_read16(_ea); M68K_ROXL16(_tmp, 1); bus_write16(_ea, _tmp); }}g;
         s{/\* TODO \$[0-9A-Fa-f]+: sbcd\.b d([0-7]), d([0-7])\s+\[[^]]+\] \*/}{M68K_SBCD8(g_m68k.d[$2], g_m68k.d[$1]);}g;
