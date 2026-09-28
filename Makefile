@@ -102,11 +102,11 @@ build/third_party/z80/z80.o: CFLAGS += -Dz80_init=z80_core_init
 # whose unused parameters trigger -Werror under Clang. Keep -Werror for the
 # project while scoping this suppression to the vendored YMFM translation
 # units (including our adapter that includes YMFM headers).
-build/src/ym2610_backend.o: CXXFLAGS += -Wno-unused-parameter
-build/third_party/ymfm/src/ymfm_opn.o: CXXFLAGS += -Wno-unused-parameter
-build/third_party/ymfm/src/ymfm_misc.o: CXXFLAGS += -Wno-unused-parameter
-build/third_party/ymfm/src/ymfm_ssg.o: CXXFLAGS += -Wno-unused-parameter
-build/third_party/ymfm/src/ymfm_adpcm.o: CXXFLAGS += -Wno-unused-parameter
+build/src/ym2610_backend.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_opn.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_misc.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_ssg.o: override CXXFLAGS += -Wno-unused-parameter
+build/third_party/ymfm/src/ymfm_adpcm.o: override CXXFLAGS += -Wno-unused-parameter
 
 debug: CFLAGS += -g -O0
 debug: clean all
