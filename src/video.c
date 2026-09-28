@@ -292,7 +292,7 @@ static void draw_sprite_line(
     uint8_t h_shrink)
 {
     uint16_t mask = s_zoom_x[h_shrink & 0x0F];
-    int dst_x = screen_x;
+    int dst_x = screen_x & 0x1FF;
     int pal_base = palette_idx * 16;
 
     for (int x = 0; x < 16; x++) {
@@ -300,8 +300,9 @@ static void draw_sprite_line(
         if ((mask & (uint16_t)(1u << (15 - source_x))) == 0)
             continue;
 
-        int px = dst_x++;
-        if (px < 0 || px >= NEOGEO_SCREEN_WIDTH)
+        int px = dst_x;
+        dst_x = (dst_x + 1) & 0x1FF;
+        if (px >= NEOGEO_SCREEN_WIDTH)
             continue;
 
         uint8_t pixel = sprite_pixel(tile_num, source_x, source_y);
@@ -423,11 +424,8 @@ void video_render_frame(uint32_t *framebuffer) {
         int y_raw = (scb3 >> 7) & 0x1FF;
         int x_raw = (scb4 >> 7) & 0x1FF;
         int height = scb3 & 0x3F;
-        int y = (496 - y_raw) & 0x1FF;
+        int y = (0x200 - y_raw) & 0x1FF;
         int x = x_raw;
-
-        if (y >= 256) y -= 512;
-        if (x >= 256) x -= 512;
 
         bool sticky = (scb3 & 0x40) != 0;
 
@@ -439,7 +437,7 @@ void video_render_frame(uint32_t *framebuffer) {
         sprites[spr].valid = height != 0;
 
         if (sticky && sprites[spr - 1].valid) {
-            sprites[spr].x = sprites[spr - 1].x + 16;
+            sprites[spr].x = (sprites[spr - 1].x + 16) & 0x1FF;
             sprites[spr].y = sprites[spr - 1].y;
             sprites[spr].height = sprites[spr - 1].height;
             sprites[spr].v_shrink = sprites[spr - 1].v_shrink;
@@ -499,8 +497,8 @@ void video_render_frame(uint32_t *framebuffer) {
             if (v_flip)
                 source_y ^= 0x0F;
 
-            int py = state->y + sprite_line;
-            if (py < 0 || py >= NEOGEO_SCREEN_HEIGHT)
+            int py = (state->y + sprite_line) & 0x1FF;
+            if (py >= NEOGEO_SCREEN_HEIGHT)
                 continue;
 
             draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
