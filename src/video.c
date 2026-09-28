@@ -432,7 +432,7 @@ void video_render_frame(uint32_t *framebuffer) {
         int y_raw = (scb3 >> 7) & 0x1FF;
         int x_raw = (scb4 >> 7) & 0x1FF;
         int height = scb3 & 0x3F;
-        int y = (0x200 - y_raw) & 0x1FF;
+        int y = (0x1F0 - y_raw) & 0x1FF;
         int x = x_raw;
 
         bool sticky = (scb3 & 0x40) != 0;
