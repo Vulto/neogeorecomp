@@ -98,6 +98,11 @@ build/games/neodriftout/recomp/gameplay.o: CFLAGS += -Dfunc_000CC6=func_000CC6_a
 # Keep strict warnings for project C while scoping this suppression to the
 # translation unit that includes that generated header.
 build/src/neodriftout_main.o: override CFLAGS += -Wno-invalid-utf8
+
+# The game submodule is generated recompilation output maintained upstream.
+# Keep its warnings visible without allowing them to block this repository's
+# strict compilation gate.
+build/games/neodriftout/%.o: override CFLAGS += -Wno-error=unused-variable
 build/games/neodriftout/recomp/overrides.o: CFLAGS += -Dfunc_01229E=func_01229E_upstream
 build/games/neodriftout/src/autorecomp/recomp_010100_012252.o: CFLAGS += -Dsub_012036=sub_012036_upstream
 
