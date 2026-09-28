@@ -506,6 +506,16 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        bus_write8(0x100300, 0x80);
+        g_m68k.flag_x = true;
+        M68K_BFTST_MEMORY(0x100300, 0, 4);
+        if (!g_m68k.flag_n || !g_m68k.flag_z ||
+            g_m68k.flag_v || g_m68k.flag_c || !g_m68k.flag_x) {
+            fprintf(stderr, "[neodriftout] self-test: BFTST failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
