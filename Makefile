@@ -57,7 +57,7 @@ neodriftout: $(RuntimeLibrary) $(GameObjects)
 	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
 
 test: neodriftout
-	@echo "Neo Drift Out build smoke test passed."
+	@SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy NEOGEO_HEADLESS=1 ./neodriftout --self-test
 
 else
 
