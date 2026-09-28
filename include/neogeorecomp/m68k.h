@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <neogeorecomp/bus.h>
 
 #ifdef __cplusplus
 extern "C" {
