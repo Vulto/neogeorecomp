@@ -46,13 +46,15 @@ GameSources := \
 
 GameObjects := $(GameSources:%.c=build/%.o)
 
-.PHONY: all clean test debug runtime neodriftout prepare prepare-rom romcheck run decomp-audit
+.PHONY: all clean test debug runtime neodriftout prepare prepare-rom romcheck run decomp-audit decomp-patch
 
 ifeq ($(SUBMODULES_READY),1)
 
 all: neodriftout
 
 runtime: $(RuntimeLibrary)
+
+decomp-patch: $(DECOMP_STAMP)
 
 neodriftout: $(RuntimeLibrary) $(GameObjects)
 	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
@@ -80,6 +82,16 @@ $(SUBMODULE_READY_STAMP): .gitmodules
 	@touch $@
 
 endif
+
+DECOMP_STAMP := build/.neodriftout-decomp-ready
+DECOMP_SCRIPT := tools/patch_neodriftout_decomp.sh
+
+$(DECOMP_STAMP): $(DECOMP_SCRIPT) .git/submodules-ready
+	@mkdir -p $(@D)
+	@sh $(DECOMP_SCRIPT) games/neodriftout/src/autorecomp
+	@touch $@
+
+$(GameObjects): $(DECOMP_STAMP)
 
 $(RuntimeLibrary): $(RuntimeCObjects) $(RuntimeCxxObjects)
 	@mkdir -p $(@D)
