@@ -601,11 +601,11 @@ int main(int argc, char *argv[]) {
         {
             int16_t audio_test[4] = {0, 0, 0, 0};
 
-            ym2610_write(0, 0x24, 0);
+            ym2610_write(0, 0x25, 0);
             ym2610_generate(audio_test, 2);
             ym2610_write(1, 0, 0x03);
 
-            ym2610_write(0, 0x25, 0);
+            ym2610_write(0, 0x24, 0);
             ym2610_generate(audio_test, 2);
             ym2610_write(1, 0, 0xFF);
 
