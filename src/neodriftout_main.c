@@ -599,6 +599,7 @@ int main(int argc, char *argv[]) {
 
         ym2610_reset();
         ym2610_write(0, 0x24, 0);
+        ym2610_write(1, 0, 0x00);
         if ((ym2610_read(0) & 0x80) == 0) {
             fprintf(stderr, "[neodriftout] self-test: YM2610 BUSY did not assert\\n");
             neogeo_shutdown();
