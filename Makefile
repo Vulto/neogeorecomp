@@ -63,9 +63,8 @@ else
 
 .PHONY: all runtime neodriftout test
 
-# Make submodule initialization idempotent. If a previous interrupted clone left
-# a non-empty worktree behind, re-use and repair that worktree instead of trying
-# to clone over it.
+# Initialize submodules through Git's own recovery path. A stale plain
+# directory is not a usable submodule worktree; remove it before cloning.
 SUBMODULE_READY_STAMP := .git/submodules-ready
 SUBMODULE_PATHS := games/neodriftout third_party/z80 third_party/ymfm
 
@@ -74,12 +73,10 @@ all runtime neodriftout test: $(SUBMODULE_READY_STAMP)
 
 $(SUBMODULE_READY_STAMP): .gitmodules
 	@git submodule sync --recursive
-	@for path in $(SUBMODULE_PATHS); do \
-		if [ -d "$path" ] && [ ! -e "$path/.git" ]; then \
-			git config --get-regexp "^submodule\.$path\." >/dev/null 2>&1 || true; \
-			git rm -f --cached "$path" >/dev/null 2>&1 || true; \
-			rm -rf "$path"; \
-		fi; \
+	@for path in $(SUBMODULE_PATHS); do \\
+		if [ -d "$$path" ] && [ ! -e "$$path/.git" ]; then \\
+			rm -rf "$$path"; \\
+		fi; \\
 	done
 	@git submodule update --init --recursive
 	@mkdir -p $(@D)
