@@ -46,7 +46,7 @@ GameSources := \
 
 GameObjects := $(GameSources:%.c=build/%.o)
 
-.PHONY: all clean test debug runtime neodriftout prepare-rom romcheck run
+.PHONY: all clean test debug runtime neodriftout prepare prepare-rom romcheck run
 
 ifeq ($(SUBMODULES_READY),1)
 
@@ -136,11 +136,14 @@ prepare-rom:
 	@sh tools/prepare_neodriftout_roms.sh "$(ROM)" "$(ROM_DIR)"
 
 romcheck:
-	@if [ -n "$(ROM)" ]; then $(MAKE) --no-print-directory prepare-rom ROM="$(ROM)" ROM_DIR="$(ROM_DIR)"; fi
 	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
 
-run: neodriftout
-	@$(MAKE) --no-print-directory romcheck ROM="$(ROM)" ROM_DIR="$(ROM_DIR)"
+prepare: neodriftout
+	@test -n "$(ROM)" || (echo "usage: make prepare ROM=/path/to/neodrift.zip [ROM_DIR=build/roms/neodriftout]" >&2; exit 2)
+	@$(MAKE) --no-print-directory prepare-rom ROM="$(ROM)" ROM_DIR="$(ROM_DIR)"
+	@$(MAKE) --no-print-directory romcheck ROM_DIR="$(ROM_DIR)"
+
+run: prepare
 	./neodriftout --rom-path "$(ROM_DIR)"
 
 clean:

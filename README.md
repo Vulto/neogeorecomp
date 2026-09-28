@@ -99,14 +99,15 @@ neogeorecomp/
 ### Prerequisites
 
 - Clang
-- LLVM
+- LLVM (llvm-ar)
 - GNU Make
 - SDL3 development libraries
 - Git
+- unzip (only needed when preparing a ROM ZIP)
 
-### Build Steps
+### Build
 
-A normal clone is enough; `make` initializes the required Git submodules automatically.
+The repository uses **C23 + Clang + Make + SDL3**. A normal clone is enough: the first make initializes the required Git submodules automatically.
 
 ```bash
 git clone https://github.com/Vulto/neogeorecomp.git
@@ -114,20 +115,27 @@ cd neogeorecomp
 make
 ```
 
-This produces the native `neodriftout` executable.
+This produces the native neodriftout executable.
 
-### Neo Drift Out: ROM setup and run
+### Neo Drift Out: one-command ROM setup and run
 
-ROM data is **not** stored in this repository. Give the build a legally obtained Neo Drift Out ZIP and the Make workflow will extract only the eight ROM files required by the runtime, validate their sizes and SHA-256 hashes, and keep the extracted set under `build/roms/neodriftout`.
+ROM data is never committed to the repository. Give make the path to your legally obtained Neo Drift Out ZIP. The workflow extracts only the required files, validates their size and SHA-256, and stores the prepared set under build/roms/neodriftout.
 
-The shortest workflow is:
+The normal workflow is:
 
 ```bash
-make
 make run ROM="$HOME/downloads/neodrift.zip"
 ```
 
-The ZIP can contain BIOS files and other ROMs; they are ignored. Only these files are prepared:
+That command automatically:
+
+1. initializes missing submodules;
+2. builds neodriftout;
+3. extracts the required ROM files from the ZIP;
+4. validates every required ROM by size and SHA-256;
+5. starts the native executable.
+
+The ZIP may contain BIOS files or other ROMs; they are ignored. The runtime needs these eight files:
 
 ```text
 000-lo.lo
@@ -140,22 +148,32 @@ The ZIP can contain BIOS files and other ROMs; they are ignored. Only these file
 213-v2.v2
 ```
 
+### Separate preparation and validation
+
+If you want to prepare the ROM set without launching the game:
+
+```bash
+make prepare ROM="$HOME/downloads/neodrift.zip"
+```
+
 If the ROMs are already extracted:
 
 ```bash
-make run ROM_DIR=/path/to/neodriftout-roms
+make prepare ROM_DIR=/path/to/neodrift-roms
+make run ROM_DIR=/path/to/neodrift-roms
 ```
 
-To prepare without launching:
+The lower-level targets are also available:
 
 ```bash
-make prepare-rom ROM="$HOME/downloads/neodrift.zip"
+make prepare-rom ROM=/path/to/neodrift.zip
 make romcheck
+make run
 ```
 
-By default the prepared files go to `build/roms/neodriftout`. Override that with `ROM_DIR=/path/to/output`.
+By default, prepared ROMs go to build/roms/neodriftout. Override the destination with ROM_DIR=/path/to/output.
 
-The ROM checker is deterministic and validates every required file by size and SHA-256 before the native executable starts. The original ZIP and extracted ROM data remain local and are never uploaded by the build or CI.
+The original ZIP and extracted ROM data remain local and are never uploaded by the build or CI.
 
 ## Game Projects Using This Runtime
 
@@ -265,14 +283,3 @@ This is an active project and we welcome contributions. Whether you're intereste
 - Writing documentation or tutorials
 
 Open an issue or PR. Let's make Neo Geo games run natively everywhere.
-
-### Validating a ROM set
-
-The build automatically initializes the required Git submodules when they are missing. The native runtime does not require ROM data to be committed to this repository. To validate a locally dumped Neo Drift Out set before running the executable:
-
-```bash
-make romcheck ROM_DIR=/path/to/roms
-make run ROM_DIR=/path/to/roms
-```
-
-The checker validates the seven game ROM files plus the required 000-lo.lo system ROM by size and SHA-256. The ROM files themselves remain outside Git and CI.
