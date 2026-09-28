@@ -562,22 +562,23 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    /* 3. Render fix layer (always on top) */
-    /* Fix layer: 40 columns x 32 rows of 8x8 tiles at VRAM $7000 */
-    /* Visible area: 40 x 28 tiles (NTSC), stored top-to-bottom, left-to-right */
+    /* 3. Render fix layer (always on top).
+     * The 40x32 map has two hidden rows above and below the NTSC window.
+     * Visible screen row 0 maps to VRAM row 2. */
+    enum { FixVisibleRows = 28, FixVisibleRowOffset = 2 };
     for (int col = 0; col < NEOGEO_FIX_COLS; col++) {
-        for (int row = 0; row < NEOGEO_FIX_ROWS; row++) {
-            uint16_t fix_entry = s_vram[0x7000 + col * NEOGEO_FIX_ROWS + row];
+        for (int row = 0; row < FixVisibleRows; row++) {
+            int map_row = row + FixVisibleRowOffset;
+            uint16_t fix_entry = s_vram[0x7000 + col * NEOGEO_FIX_ROWS + map_row];
 
             uint16_t tile_num = fix_entry & 0x0FFF;
             uint8_t palette_idx = (fix_entry >> 12) & 0x0F;
 
-            if (tile_num == 0) continue;  /* Empty tile */
+            if (tile_num == 0) continue;
 
             int px = col * 8;
             int py = row * 8;
 
-            /* Only first 16 palettes available for fix layer */
             decode_fix_tile(tile_num, palette_idx, px, py, argb, framebuffer);
         }
     }
