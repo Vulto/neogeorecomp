@@ -326,6 +326,7 @@ int main(int argc, char *argv[]) {
     extern void func_011C78(void);  /* Partial VRAM DMA copy (24 words) */
     extern void func_011C98(void);  /* Partial VRAM DMA copy (8 words) */
     extern void func_000CC6(void);  /* Sub-state 1 handler (split fix) */
+    extern void func_000EFC(void);  /* Car-select transition continuation */
     func_table_register(0x01229E, func_01229E);
     extern void func_012202(void);  /* Sprite allocator (with logging) */
     extern void func_01229E(void);  /* Sprite upload synchronization wrapper */
@@ -334,6 +335,7 @@ int main(int argc, char *argv[]) {
     func_table_register(0x011C88, func_011C88);
     func_table_register(0x011C98, func_011C98);
     func_table_register(0x000CC6, func_000CC6);
+    func_table_register(0x000EFC, func_000EFC);
     func_table_register(0x007EE8, func_007EE8);
 
     printf("[neodriftout] Registered %u total functions (with hand-written overrides)\n",
