@@ -99,12 +99,30 @@ int bus_load_prom(const char *p1_path, const char *p2_path) {
      */
     if (p1_size == 0x200000 && !f2) {
         /* 2 MB single P ROM: swap halves */
-        fread(s_prom + 0x100000, 1, 0x100000, f);  /* First MB -> offset 1 MB */
-        fread(s_prom, 1, 0x100000, f);              /* Second MB -> offset 0 */
+        if (fread(s_prom + 0x100000, 1, 0x100000, f) != 0x100000 ||
+            fread(s_prom, 1, 0x100000, f) != 0x100000) {
+            fclose(f);
+            free(s_prom);
+            s_prom = NULL;
+            s_prom_size = 0;
+            return -1;
+        }
     } else {
-        fread(s_prom, 1, (size_t)p1_size, f);
-        if (f2) {
-            fread(s_prom + p1_size, 1, (size_t)p2_size, f2);
+        if (fread(s_prom, 1, (size_t)p1_size, f) != (size_t)p1_size) {
+            fclose(f);
+            if (f2) fclose(f2);
+            free(s_prom);
+            s_prom = NULL;
+            s_prom_size = 0;
+            return -1;
+        }
+        if (f2 && fread(s_prom + p1_size, 1, (size_t)p2_size, f2) != (size_t)p2_size) {
+            fclose(f);
+            fclose(f2);
+            free(s_prom);
+            s_prom = NULL;
+            s_prom_size = 0;
+            return -1;
         }
     }
 
@@ -145,7 +163,12 @@ int bus_load_bios(const char *bios_path) {
     s_bios = (uint8_t *)malloc(0x20000);  /* 128 KB */
     if (!s_bios) { fclose(f); return -1; }
 
-    fread(s_bios, 1, 0x20000, f);
+    if (fread(s_bios, 1, 0x20000, f) != 0x20000) {
+        fclose(f);
+        free(s_bios);
+        s_bios = NULL;
+        return -1;
+    }
     fclose(f);
 
     printf("[bus] Loaded BIOS: 128 KB\n");
