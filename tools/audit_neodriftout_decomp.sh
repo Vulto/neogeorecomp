@@ -28,8 +28,9 @@ for file in $(find "$ROOT" -type f -name '*.c' -print); do
         }
         /^void / {
             flush();
-            match($0, /^void ([^(]+)/, name);
-            function_name = name[1];
+            function_name = $0;
+            sub(/^void /, "", function_name);
+            sub(/\(.*/, "", function_name);
             data_function = (function_name ~ /^jt_/);
             unhandled = 0;
         }
