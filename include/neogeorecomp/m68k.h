@@ -1024,6 +1024,38 @@ void m68k_set_sr(uint16_t sr);
     (dst) = _res; \
 } while(0)
 
+/* --- MOVEP: memory-peripheral byte-spaced transfer --- */
+#define M68K_MOVEP16_MEM_TO_REG(dst, addr) do { \
+    uint32_t _ea = (uint32_t)(addr); \
+    uint16_t _v = (uint16_t)(((uint16_t)bus_read8(_ea) << 8) | bus_read8(_ea + 2)); \
+    (dst) = ((dst) & 0xFFFF0000u) | _v; \
+} while(0)
+
+#define M68K_MOVEP32_MEM_TO_REG(dst, addr) do { \
+    uint32_t _ea = (uint32_t)(addr); \
+    uint32_t _v = ((uint32_t)bus_read8(_ea) << 24) | \
+                  ((uint32_t)bus_read8(_ea + 2) << 16) | \
+                  ((uint32_t)bus_read8(_ea + 4) << 8) | \
+                  (uint32_t)bus_read8(_ea + 6); \
+    (dst) = _v; \
+} while(0)
+
+#define M68K_MOVEP16_REG_TO_MEM(src, addr) do { \
+    uint32_t _ea = (uint32_t)(addr); \
+    uint16_t _v = (uint16_t)(src); \
+    bus_write8(_ea, (uint8_t)(_v >> 8)); \
+    bus_write8(_ea + 2, (uint8_t)_v); \
+} while(0)
+
+#define M68K_MOVEP32_REG_TO_MEM(src, addr) do { \
+    uint32_t _ea = (uint32_t)(addr); \
+    uint32_t _v = (uint32_t)(src); \
+    bus_write8(_ea, (uint8_t)(_v >> 24)); \
+    bus_write8(_ea + 2, (uint8_t)(_v >> 16)); \
+    bus_write8(_ea + 4, (uint8_t)(_v >> 8)); \
+    bus_write8(_ea + 6, (uint8_t)_v); \
+} while(0)
+
 /* --- SBCD/NBCD: packed BCD subtract with extend --- */
 #define M68K_SBCD8(dst, src) do { \
     uint8_t _d = (uint8_t)(dst); \
