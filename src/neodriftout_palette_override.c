@@ -1,5 +1,6 @@
 #include <neogeorecomp/bus.h>
 #include <neogeorecomp/m68k.h>
+#include <neogeorecomp/func_table.h>
 
 extern void sub_012036_upstream(void);
 
