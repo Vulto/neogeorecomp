@@ -10,11 +10,10 @@
  * Rendering priority: Lower sprite numbers have higher priority.
  * The fix layer is always on top of all sprites.
  *
- * TODO:
- *   - Implement per-sprite shrinking (SCB2)
- *   - Implement auto-animation (4-frame and 8-frame)
- *   - Implement scanline-accurate rendering for raster effects
- *   - GPU-accelerated rendering path
+ * Notes:
+ *   - SCB2 vertical/horizontal shrinking is implemented.
+ *   - Auto-animation and scanline sprite limits are implemented.
+ *   - GPU acceleration remains optional and outside the hardware emulation path.
  */
 
 #include <neogeorecomp/video.h>
@@ -485,9 +484,13 @@ void video_render_frame(uint32_t *framebuffer) {
         SpriteState *state = &sprites[spr];
         if (!state->valid || state->height <= 0)
             continue;
-        if (state->v_shrink == 0 || state->h_shrink == 0)
-            continue;
-                uint16_t scb1_base = (uint16_t)(spr * 64);
+        /*
+         * SCB2 values of zero are valid hardware values:
+         *   vertical 0 = minimum vertical height
+         *   horizontal 0 = one output pixel per source row.
+         * Do not discard these sprites.
+         */
+        uint16_t scb1_base = (uint16_t)(spr * 64);
 
         for (int sprite_line = 0; sprite_line < state->height * 16 && sprite_line < 512; sprite_line++) {
             int zoom_line = sprite_line & 0xFF;
