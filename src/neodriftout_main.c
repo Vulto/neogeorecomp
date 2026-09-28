@@ -598,11 +598,21 @@ int main(int argc, char *argv[]) {
         }
 
         ym2610_reset();
-        ym2610_write(0, 0x24, 0x03);
-        ym2610_write(1, 0xFF, 0);
-        ym2610_write(0, 0x27, 0x05);
         {
-            int16_t audio_test[2] = {0, 0};
+            int16_t audio_test[4] = {0, 0, 0, 0};
+
+            ym2610_write(0, 0x24, 0);
+            ym2610_generate(audio_test, 2);
+            ym2610_write(1, 0x03, 0);
+
+            ym2610_write(0, 0x25, 0);
+            ym2610_generate(audio_test, 2);
+            ym2610_write(1, 0xFF, 0);
+
+            ym2610_write(0, 0x27, 0);
+            ym2610_generate(audio_test, 2);
+            ym2610_write(1, 0x05, 0);
+
             ym2610_generate(audio_test, 1);
         }
         if (!ym2610_irq_pending()) {
