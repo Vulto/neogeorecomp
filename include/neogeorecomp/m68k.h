@@ -28,6 +28,7 @@
 #define NEOGEORECOMP_M68K_H
 
 #include <stdint.h>
+#include <neogeorecomp/bus.h>
 #include <stdbool.h>
 #include <neogeorecomp/bus.h>
 
