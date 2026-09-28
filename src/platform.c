@@ -11,6 +11,8 @@
 
 #include <SDL3/SDL.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static SDL_Window *s_window = NULL;
 static SDL_Renderer *s_renderer = NULL;
