@@ -26,10 +26,15 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang llvm make libsdl3-dev
 
-      - name: Build
-        run: make
+      - name: Clean build
+        run: make clean
 
-      - name: Test
+      - name: Build with warnings as errors
+        run: |
+          make CFLAGS="-std=c23 -O2 -Wall -Wextra -Wpedantic -Werror" \
+               CXXFLAGS="-std=c++14 -O2 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Native runtime self-test
         run: make test
 
       - name: Package native runtime
