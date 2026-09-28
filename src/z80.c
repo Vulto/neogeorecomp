@@ -227,6 +227,10 @@ void z80_set_nmi_enabled(bool enabled) {
     s_nmi_enabled = enabled;
 }
 
+void z80_set_irq(bool asserted) {
+    s_cpu.int_pending = asserted;
+}
+
 void z80_reset(void) {
     memset(s_z80_ram, 0, sizeof(s_z80_ram));
     s_cmd_latch = 0;

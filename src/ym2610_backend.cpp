@@ -1,13 +1,41 @@
 #include <neogeorecomp/ym2610_backend.h>
+#include <neogeorecomp/z80.h>
 
 #include <cstdint>
 #include <vector>
 
 #include "ymfm_opn.h"
 
+static bool s_irq_pending;
+
 class ym2610_interface final : public ymfm::ymfm_interface {
 public:
     std::vector<uint8_t> vrom;
+    int32_t timer_clocks[2] = { -1, -1 };
+
+    void ymfm_set_timer(uint32_t tnum, int32_t duration_in_clocks) override {
+        if (tnum < 2)
+            timer_clocks[tnum] = duration_in_clocks;
+    }
+
+    void ymfm_update_irq(bool asserted) override {
+        s_irq_pending = asserted;
+        z80_set_irq(asserted);
+    }
+
+    void advance_timers(double clocks) {
+        for (uint32_t tnum = 0; tnum < 2; tnum++) {
+            if (timer_clocks[tnum] < 0)
+                continue;
+
+            timer_clocks[tnum] -= (int32_t)clocks;
+            if (timer_clocks[tnum] <= 0) {
+                timer_clocks[tnum] = -1;
+                if (m_engine)
+                    m_engine->engine_timer_expired(tnum);
+            }
+        }
+    }
 
     uint8_t ymfm_external_read(ymfm::access_class type, uint32_t address) override {
         if (type != ymfm::ACCESS_ADPCM_A && type != ymfm::ACCESS_ADPCM_B)
@@ -45,12 +73,18 @@ extern "C" int ym2610_backend_init(int sample_rate) {
     s_prev = 0;
     s_curr = 0;
     s_primed = false;
+    s_interface.timer_clocks[0] = -1;
+    s_interface.timer_clocks[1] = -1;
+    z80_set_irq(false);
+    s_irq_pending = false;
     return s_chip_rate != 0 ? 0 : -1;
 }
 
 extern "C" void ym2610_backend_shutdown(void) {
     delete s_chip;
     s_chip = nullptr;
+    z80_set_irq(false);
+    s_irq_pending = false;
     s_interface.vrom.clear();
     s_interface.vrom.shrink_to_fit();
 }
@@ -81,6 +115,14 @@ extern "C" void ym2610_backend_reset(void) {
     s_prev = 0;
     s_curr = 0;
     s_primed = false;
+    s_interface.timer_clocks[0] = -1;
+    s_interface.timer_clocks[1] = -1;
+    z80_set_irq(false);
+    s_irq_pending = false;
+}
+
+extern "C" bool ym2610_backend_irq_pending(void) {
+    return s_irq_pending;
 }
 
 extern "C" void ym2610_backend_generate(int16_t *buffer, int num_samples) {

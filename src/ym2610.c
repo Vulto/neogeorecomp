@@ -100,7 +100,7 @@ void ym2610_tick_timers(int cycles) {
 }
 
 int ym2610_irq_pending(void) {
-    return 0;
+    return ym2610_backend_irq_pending() ? 1 : 0;
 }
 
 void ym2610_reset(void) {

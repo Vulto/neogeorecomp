@@ -78,6 +78,9 @@ uint8_t z80_read_reply(void);
 /* Enable/disable NMI (Z80 ports $08/$18). */
 void z80_set_nmi_enabled(bool enabled);
 
+/* Set the Z80 maskable interrupt request line. */
+void z80_set_irq(bool asserted);
+
 /* ----- Reset ----- */
 
 void z80_reset(void);
