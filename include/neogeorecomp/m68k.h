@@ -29,6 +29,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <neogeorecomp/bus.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -1023,6 +1024,33 @@ void m68k_set_sr(uint16_t sr);
     g_m68k.flag_n = (_res & 0x80000000u) != 0; \
     (dst) = _res; \
 } while(0)
+
+/* --- BFTST: test a 68020 bit field --- */
+static inline void m68k_bftst_memory(uint32_t address, int offset, unsigned width) {
+    bool any = false;
+    bool msb = false;
+
+    if (width == 0 || width > 32)
+        width = 32;
+
+    for (unsigned i = 0; i < width; i++) {
+        int bit = offset + (int)i;
+        uint32_t ea = address + (uint32_t)(bit / 8);
+        unsigned bit_in_byte = (unsigned)(bit & 7);
+        uint8_t value = bus_read8(ea);
+        bool set = (value & (uint8_t)(1u << (7u - bit_in_byte))) != 0;
+        if (i == 0)
+            msb = set;
+        any |= set;
+    }
+
+    g_m68k.flag_n = msb;
+    g_m68k.flag_z = !any;
+    g_m68k.flag_v = false;
+    g_m68k.flag_c = false;
+}
+
+#define M68K_BFTST_MEMORY(address, offset, width)     m68k_bftst_memory((uint32_t)(address), (int)(offset), (unsigned)(width))
 
 /* --- MOVEP: memory-peripheral byte-spaced transfer --- */
 #define M68K_MOVEP16_MEM_TO_REG(dst, addr) do { \

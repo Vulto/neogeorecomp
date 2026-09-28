@@ -12,7 +12,7 @@ files=$(find "$ROOT" -type f -name '*.c' -print)
 changed=0
 
 for file in $files; do
-    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.)' "$file" || true)
+    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.|bftst )' "$file" || true)
 
     if [ "$before" -eq 0 ]; then
         continue
@@ -44,9 +44,11 @@ for file in $files; do
         s{/\* TODO \$[0-9A-Fa-f]+: movep\.l d([0-7]), \$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP32_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] + 0x$2);}g;
         s{/\* TODO \$[0-9A-Fa-f]+: movep\.w d([0-7]), -\$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP16_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] - 0x$2);}g;
         s{/\* TODO \$[0-9A-Fa-f]+: movep\.l d([0-7]), -\$([0-9A-Fa-f]+)\(a([0-7])\)\s+\[[^]]+\] \*/}{M68K_MOVEP32_REG_TO_MEM(g_m68k.d[$1], g_m68k.a[$3] - 0x$2);}g;
+        s{/\* TODO \$0FB688: bftst -\$20\(a0, a5\.w\)\{0:4\}\s+\[[^]]+\] \*/}{M68K_BFTST_MEMORY(g_m68k.a[0] + (int16_t)(uint16_t)g_m68k.a[5] - 0x20, 0, 4);}g;
+        s{/\* TODO \$077D54: bftst \$0\.w\{0:32\}\s+\[[^]]+\] \*/}{M68K_BFTST_MEMORY(0x000000, 0, 32);}g;
     ' "$file"
 
-    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.)' "$file" || true)
+    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd\.b |nbcd\.b |movep\.|bftst )' "$file" || true)
     if [ "$after" -ge "$before" ]; then
         echo "decomp patch: failed to replace ROX instructions in $file" >&2
         exit 1
