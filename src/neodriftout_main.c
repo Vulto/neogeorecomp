@@ -31,7 +31,6 @@ static void func_007EE8(void) {
 /* ----- ROM Path Helpers ----- */
 
 static char s_rom_path[512] = ".";
-static bool s_autostart = false;
 
 static void make_path(char *buf, size_t size, const char *filename) {
     snprintf(buf, size, "%s/%s", s_rom_path, filename);
@@ -70,48 +69,58 @@ static void bios_vblank_default(void) {
 /* $C00444 — BIOS: return from game to system (eyecatcher, title) */
 static void bios_return_to_system(void) {
     /*
-     * On real hardware, this returns control to the BIOS which handles
-     * the eyecatcher (SNK logo), then calls USER again with the next
-     * state. Since we don't have the BIOS, we simulate the state
-     * transitions it would make.
+     * SYSTEM_RETURN hands control back to the MVS BIOS. The native runtime
+     * has no BIOS ROM, so emulate only the state transitions that this game
+     * actually observes:
+     *   State 0 -> title state
+     *   State 1 -> title/credit wait, then demo
+     *   State 9 -> title state after game over
+     * A real Start input while in title enters player mode (state 3).
      *
-     * The BIOS normally:
-     *   - After State 0 (init): plays eyecatcher, then sets state=1 (title)
-     *   - After State 1 (title): waits for coin/timeout, sets state=2 (demo)
-     *   - After State 9 (results): goes back to state=1 (title)
-     *
-     * We skip the eyecatcher and title, going straight to demo mode.
-     * We also need to set the VBlank active flag and other state that
-     * the BIOS would establish before re-entering the game.
+     * The Neo Geo development documentation describes roughly five seconds
+     * for a title presentation before the attract/demo sequence continues.
      */
+    enum { TITLE_TIMEOUT_FRAMES = 300 };
+    static unsigned title_frames;
+
     uint8_t state = bus_read8(0x10FDAE);
-    printf("[BIOS stub] return_to_system called, current state=%d\n", state);
 
-    if (state <= 1) {
-        /* Enter demo mode (state 2). The game will run sub-state 0
-         * (init + sound setup), then sub-state 1 (title animation).
-         * We set $10041A = 1 to simulate a demo timer event so the
-         * title animation exits to sub-state 2 (stage intro) instead
-         * of looping back to the BIOS. */
-        bus_bios_write8(0x10FDAE, 2);
-
-        /* Enable game VBlank handling */
-        uint8_t flags = bus_read8(0x10FD80);
-        bus_write8(0x10FD80, flags | 0x80);
-    }
-    /* For other states (like 9 = results), go back to demo */
-    else {
-        bus_bios_write8(0x10FDAE, 2);
-        uint8_t flags = bus_read8(0x10FD80);
-        bus_write8(0x10FD80, flags | 0x80);
+    if (state == 0 || state == 9) {
+        bus_bios_write8(0x10FDAE, 1);
+        title_frames = 0;
+        bus_write8(0x10FD80, bus_read8(0x10FD80) | 0x80);
+        return;
     }
 
-    /* If Start was pressed ($10FE80 set), switch to car select */
-    if (bus_read16(0x10FE80) != 0) {
-        printf("[BIOS stub] Start pressed — entering car select!\n");
-        bus_bios_write8(0x10FDAE, 3);
-        bus_write16(0x10FE80, 0);
+    if (state == 1) {
+        title_frames++;
+
+        if (bus_read16(0x10FE80) != 0) {
+            bus_bios_write8(0x10FDAE, 3);
+            bus_write16(0x10FE80, 0);
+            title_frames = 0;
+            return;
+        }
+
+        if (title_frames >= TITLE_TIMEOUT_FRAMES) {
+            bus_bios_write8(0x10FDAE, 2);
+            title_frames = 0;
+        }
+
+        bus_write8(0x10FD80, bus_read8(0x10FD80) | 0x80);
+        return;
     }
+
+    if (state == 2) {
+        if (bus_read16(0x10FE80) != 0) {
+            bus_bios_write8(0x10FDAE, 3);
+            bus_write16(0x10FE80, 0);
+        }
+        return;
+    }
+
+    bus_bios_write8(0x10FDAE, 1);
+    title_frames = 0;
 }
 
 /* $C0044A — BIOS VBlank processing (called from game's VBlank handler) */
@@ -265,9 +274,7 @@ int main(int argc, char *argv[]) {
 
     /* Parse command line */
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--autostart") == 0) {
-            s_autostart = true;
-        } else if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
+        if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
             strncpy(s_rom_path, argv[++i], sizeof(s_rom_path) - 1);
         }
     }
@@ -334,10 +341,7 @@ int main(int argc, char *argv[]) {
 
     /* Start execution */
     platform_set_title("Neo Drift Out: New Technology [neogeorecomp]");
-    if (s_autostart)
-        func_table_call(0x000756);
-    else
-        neogeo_run();
+    neogeo_run();
 
     return 0;
 }
