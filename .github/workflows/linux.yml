@@ -46,6 +46,9 @@ jobs:
       - name: Native runtime self-test
         run: make test
 
+      - name: Audit decompilation coverage
+        run: make decomp-audit
+
       - name: Package native runtime
         run: |
           mkdir -p dist/lib
