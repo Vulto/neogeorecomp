@@ -44,13 +44,16 @@ GameSources := \
 
 GameObjects := $(GameSources:%.c=build/%.o)
 
-.PHONY: all clean test debug runtime neodriftout romcheck run
+.PHONY: all clean test debug runtime neodriftout romcheck run check-submodules
 
 all: neodriftout
 
-runtime: $(RuntimeLibrary)
+check-submodules:
+	@git submodule update --init --recursive
 
-neodriftout: $(RuntimeLibrary) $(GameObjects)
+runtime: check-submodules $(RuntimeLibrary)
+
+neodriftout: check-submodules $(RuntimeLibrary) $(GameObjects)
 	$(CXX) $(CXXFLAGS) $(CFLAGS) $(LDFLAGS) $(GameObjects) $(RuntimeLibrary) $(SDL3_LIBS) $(LDLIBS) -o $@
 
 $(RuntimeLibrary): $(RuntimeObjects) $(RuntimeCxxObjects)
