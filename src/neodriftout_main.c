@@ -162,7 +162,6 @@ static void bios_vblank_process(void) {
     static uint8_t prev_status = 0xFF;
     uint8_t p1_edge = ~p1 & prev_p1;
     uint8_t p2_edge = ~p2 & prev_p2;
-    uint8_t status_edge = ~status & prev_status;
     bus_write8(0x10FD95, p1_edge);
     bus_write8(0x10FD8E, p1_edge);
     bus_write8(0x10FD8F, p2_edge);
@@ -174,7 +173,6 @@ static void bios_vblank_process(void) {
      * Bit 3 = P2 Start, Bit 2 = P2 Select */
     /* STATUS_B bit 1 = P1 Start (active low) */
     uint8_t p1_start = ((~status) >> 1) & 1;
-    uint8_t p1_select = (~status >> 0) & 1;
     bus_write8(0x10FD8A, p1_start);
     bus_write8(0x10FD8C, p1_start);  /* Credit/coin status */
     bus_write8(0x10FD98, status);     /* Raw status_b for start/select */
@@ -322,7 +320,7 @@ int main(int argc, char *argv[]) {
      * Override specific auto-generated functions with hand-written versions.
      * The auto-generator can mis-split functions when jump table targets
      * fall inside function bodies (e.g., dbhi search loops). The hand-written
-     * versions in recomp/*.c are verified correct.
+     * versions in the recomp C sources are verified correct.
      */
     extern void func_007AC4(void);  /* Sprite palette search */
     extern void func_007D98(void);  /* Palette search */
