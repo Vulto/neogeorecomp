@@ -450,8 +450,19 @@ int main(int argc, char *argv[]) {
         {
             const uint32_t *normal = palette_get_argb_table();
             const uint32_t *shadow = palette_get_shadow_argb_table();
-            if (normal[1] == 0xFF000000u || shadow[1] >= normal[1]) {
+            if (normal[1] != 0xFFFF0000u || shadow[1] != 0xFF8E0000u) {
                 fprintf(stderr, "[neodriftout] self-test: palette shadow conversion failed\n");
+                neogeo_shutdown();
+                return 1;
+            }
+        }
+
+        palette_write(2, 0xCF00);
+        {
+            const uint32_t *normal = palette_get_argb_table();
+            const uint32_t *shadow = palette_get_shadow_argb_table();
+            if (normal[2] != 0xFFFB0000u || shadow[2] != 0xFF8D0000u) {
+                fprintf(stderr, "[neodriftout] self-test: palette dark-bit conversion failed\n");
                 neogeo_shutdown();
                 return 1;
             }
