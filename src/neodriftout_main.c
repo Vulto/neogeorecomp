@@ -598,6 +598,23 @@ int main(int argc, char *argv[]) {
         }
 
         ym2610_reset();
+        ym2610_write(0, 0x24, 0);
+        if ((ym2610_read(0) & 0x80) == 0) {
+            fprintf(stderr, "[neodriftout] self-test: YM2610 BUSY did not assert\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        {
+            int16_t busy_test[4] = {0, 0, 0, 0};
+            ym2610_generate(busy_test, 2);
+        }
+        if (ym2610_read(0) & 0x80) {
+            fprintf(stderr, "[neodriftout] self-test: YM2610 BUSY did not clear\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        ym2610_reset();
         {
             int16_t audio_test[4] = {0, 0, 0, 0};
 
