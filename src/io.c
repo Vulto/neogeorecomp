@@ -24,6 +24,7 @@ static uint8_t s_dipsw = 0xFF;        /* DIP switch state */
 static bool s_mvs_mode = true;
 static int s_region = 0;              /* 0=Japan, 1=USA, 2=Europe */
 static uint8_t s_coin_counters = 0xFF; /* Coin inputs (active low) */
+static uint8_t s_credits = 0;
 
 /* ----- Initialization ----- */
 
@@ -35,6 +36,7 @@ int io_init(bool mvs_mode, int region) {
     s_mvs_mode = mvs_mode;
     s_region = region;
     s_coin_counters = 0xFF;
+    s_credits = 0;
     printf("[io] Mode: %s, Region: %d\n", mvs_mode ? "MVS" : "AES", region);
     return 0;
 }
@@ -71,9 +73,29 @@ void io_set_button(int player, uint8_t button, bool pressed) {
 }
 
 void io_insert_coin(int slot) {
-    (void)slot;
-    /* Momentarily clear the coin bit — the game reads this on VBlank */
-    s_coin_counters &= ~(1 << slot);
+    if (slot < 0 || slot > 3)
+        return;
+
+    if (s_credits < 99)
+        s_credits++;
+
+    s_coin_counters &= (uint8_t)~(1u << slot);
+}
+
+void io_clear_coin_inputs(void) {
+    s_coin_counters = 0xFF;
+}
+
+uint8_t io_get_credits(void) {
+    return s_credits;
+}
+
+bool io_consume_credit(void) {
+    if (s_credits == 0)
+        return false;
+
+    s_credits--;
+    return true;
 }
 
 void io_press_service(void) {
