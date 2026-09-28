@@ -68,4 +68,13 @@ for file in $files; do
     changed=$((changed + before - after))
 done
 
+sbcd_before=$(grep -Rho 'TODO \$[0-9A-Fa-f]*: sbcd\\.b d[0-7], d[0-7]' "$ROOT" --include='*.c' 2>/dev/null | wc -l | tr -d ' ')
+for file in $files; do
+    perl -0pi -e '
+        s{/\\* TODO \$[0-9A-Fa-f]+: sbcd\\.b d([0-7]), d([0-7])\\s+\\[[^]]+\\] \\*/}{M68K_SBCD8(g_m68k.d[$2], g_m68k.d[$1]);}g;
+    ' "$file"
+done
+sbcd_after=$(grep -Rho 'TODO \$[0-9A-Fa-f]*: sbcd\\.b d[0-7], d[0-7]' "$ROOT" --include='*.c' 2>/dev/null | wc -l | tr -d ' ')
+echo "decomp patch: SBCD register TODOs before=$sbcd_before after=$sbcd_after"
+
 echo "decomp patch: replaced $changed missing Neo Drift Out instructions"
