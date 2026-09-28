@@ -136,6 +136,7 @@ extern "C" void ym2610_backend_reset(void) {
     s_primed = false;
     s_interface.timer_clocks[0] = -1;
     s_interface.timer_clocks[1] = -1;
+    s_interface.busy_clocks = 0.0;
     z80_set_irq(false);
     s_irq_pending = false;
 }
