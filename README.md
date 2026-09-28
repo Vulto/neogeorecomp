@@ -190,6 +190,16 @@ A successful self-test is a build/runtime sanity check; it is **not** evidence t
 
 ![Neo Drift Out Screenshot](https://raw.githubusercontent.com/sp00nznet/neodriftout/master/docs/screenshot_proof_of_life.png)
 
+## Neo Drift Out decompilation coverage
+
+The game sources are statically recompiled 68000 C, but generated code is not automatically considered complete. The repository exposes an audit target that reports untranslated instructions and operand expressions instead of silently treating them as valid recompilation:
+
+```bash
+make decomp-audit
+```
+
+The audit currently reports generated `TODO` instructions so missing 68000 translation coverage can be addressed systematically. A clean build or runtime self-test does **not** imply that every generated instruction has been translated.
+
 ## Neo Geo Memory Map
 
 The 68000 addresses 16 MB of address space. The runtime's bus layer routes every access:
