@@ -129,55 +129,50 @@ static void bios_return_to_system(void) {
 /* $C0044A — BIOS VBlank processing (called from game's VBlank handler) */
 static void bios_vblank_process(void) {
     /*
-     * The real BIOS reads controller inputs into system RAM here. The PC
-     * port performs that part directly, but does not synthesize a Start
-     * press or advance the game state on a timer.
-     * We handle input through the platform layer + io subsystem,
-     * so this is mostly a no-op. Just ensure the input bytes
-     * at the BIOS locations are updated. */
-
-    /* Read raw input from I/O registers into BIOS RAM locations.
-     *
-     * The Neo Geo BIOS processes hardware input registers each VBlank
-     * and stores processed results in system RAM for the game to read.
-     *
-     * Key BIOS RAM locations for input:
-     *   $10FD94: P1 raw joystick (active low)
-     *   $10FD95: P1 edge-detected (newly pressed, active high)
-     *   $10FD96: P1 raw (alternate location used by some games)
-     *   $10FD97: P2 raw
-     *   $10FD98: P1 start/select status
-     *   $10FD99: P2 start/select status
-     *   $10FD8A-$10FD8F: soft-DIP and player config
+     * SYSTEM_IO exposes positive-logic controller state through the BIOS
+     * RAM layout. io_read_p1cnt()/io_read_p2cnt() are active-low hardware
+     * values, so convert them before publishing BIOS_Px* fields.
      */
-    uint8_t p1 = io_read_p1cnt();
-    uint8_t p2 = io_read_p2cnt();
-    uint8_t status = io_read_status_b();
+    uint8_t p1_current = (uint8_t)~io_read_p1cnt();
+    uint8_t p2_current = (uint8_t)~io_read_p2cnt();
+    uint8_t status_raw = io_read_status_b();
+    uint8_t status_current = 0;
 
-    /* Store raw input */
-    bus_write8(0x10FD94, p1);
-    bus_write8(0x10FD96, p1);
-    bus_write8(0x10FD97, p2);
+    /* BIOS_STATCURNT uses Start/Select order, positive logic. */
+    status_current |= (uint8_t)((((uint8_t)~status_raw) >> 1) & 0x01);
+    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x01) << 1);
+    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x08) >> 1);
+    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x04) << 1);
 
-    /* Edge detection: active-high bits for newly pressed buttons */
-    static uint8_t prev_p1 = 0xFF, prev_p2 = 0xFF;
-    uint8_t p1_edge = ~p1 & prev_p1;
-    uint8_t p2_edge = ~p2 & prev_p2;
-    bus_write8(0x10FD95, p1_edge);
-    bus_write8(0x10FD8E, p1_edge);
-    bus_write8(0x10FD8F, p2_edge);
-    prev_p1 = p1;
-    prev_p2 = p2;
+    static uint8_t prev_p1;
+    static uint8_t prev_p2;
+    static uint8_t prev_status;
 
-    /* STATUS_B bit 1 = P1 Start, active low. */
-    static uint8_t prev_status = 0xFF;
-    uint8_t p1_start = ((~status) >> 1) & 1;
-    uint8_t p1_start_edge = p1_start & ((prev_status >> 1) & 1);
+    uint8_t p1_change = (uint8_t)(p1_current & (uint8_t)~prev_p1);
+    uint8_t p2_change = (uint8_t)(p2_current & (uint8_t)~prev_p2);
+    uint8_t status_change = (uint8_t)(status_current & (uint8_t)~prev_status);
+
+    bus_write8(0x10FD94, 1);            /* BIOS_P1STATUS: normal joypad */
+    bus_write8(0x10FD95, prev_p1);      /* BIOS_P1PREVIOUS */
+    bus_write8(0x10FD96, p1_current);   /* BIOS_P1CURRENT */
+    bus_write8(0x10FD97, p1_change);    /* BIOS_P1CHANGE */
+    bus_write8(0x10FD98, p1_change);    /* BIOS_P1REPEAT, initial edge */
+    bus_write8(0x10FD99, 0);            /* BIOS_P1TIMER */
+
+    bus_write8(0x10FD9A, 1);
+    bus_write8(0x10FD9B, prev_p2);
+    bus_write8(0x10FD9C, p2_current);
+    bus_write8(0x10FD9D, p2_change);
+    bus_write8(0x10FD9E, p2_change);
+    bus_write8(0x10FD9F, 0);
+
+    bus_write8(0x10FDAC, status_current);
+    bus_write8(0x10FDAD, status_change);
+    bus_write8(0x10FEDC, status_current);
+    bus_write8(0x10FEDD, status_change);
+
     uint8_t credits = io_get_credits();
-
-    bus_write8(0x10FD8A, p1_start);
-    bus_write8(0x10FD8C, credits);
-    bus_write8(0x10FD98, status);
+    uint8_t p1_start_edge = status_change & 0x01;
 
     /*
      * MVS flow: a Start edge consumes one credit. AES does not require
@@ -193,9 +188,10 @@ static void bios_vblank_process(void) {
         }
     }
 
-    prev_status = status;
+    prev_p1 = p1_current;
+    prev_p2 = p2_current;
+    prev_status = status_current;
     io_clear_coin_inputs();
-
 }
 
 /* $C004C2 — BIOS: clear fix layer */
@@ -425,6 +421,19 @@ int main(int argc, char *argv[]) {
             neogeo_shutdown();
             return 1;
         }
+
+        bios_vblank_process();
+        io_set_button(0, 0x01, true);
+        bios_vblank_process();
+        if (bus_read8(0x10FD94) != 1 ||
+            bus_read8(0x10FD96) != 0x01 ||
+            bus_read8(0x10FD97) != 0x01) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS input RAM mapping failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_button(0, 0x01, false);
+        bios_vblank_process();
 
         palette_write(0, 0x7FFF);
         if (palette_read(0) != 0x7FFF) {
