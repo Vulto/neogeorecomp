@@ -528,6 +528,20 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        bus_write16(0x100440, 0x0001);
+        g_m68k.flag_x = false;
+        {
+            uint16_t _tmp = bus_read16(0x100440);
+            M68K_ROXR16(_tmp, 1);
+            bus_write16(0x100440, _tmp);
+        }
+        if (bus_read16(0x100440) != 0x0000u || !g_m68k.flag_c ||
+            !g_m68k.flag_x) {
+            fprintf(stderr, "[neodriftout] self-test: ROXR16 memory failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         bus_write8(0x100410, 0x12);
         bus_write8(0x100420, 0x12);
         g_m68k.a[0] = 0x100410;
