@@ -12,7 +12,7 @@ files=$(find "$ROOT" -type f -name '*.c' -print)
 changed=0
 
 for file in $files; do
-    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: rox[rl]\.l ' "$file" || true)
+    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: rox[rl]\.[bwl] ' "$file" || true)
 
     if [ "$before" -eq 0 ]; then
         continue
@@ -40,7 +40,7 @@ for file in $files; do
         }{"M68K_ROXL".uc($1)."(g_m68k.d[".$3."], g_m68k.d[".$2."]);"}gxe;
     ' "$file"
 
-    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: rox[rl]\.l ' "$file" || true)
+    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: rox[rl]\.[bwl] ' "$file" || true)
     if [ "$after" -ge "$before" ]; then
         echo "decomp patch: failed to replace ROX instructions in $file" >&2
         exit 1
