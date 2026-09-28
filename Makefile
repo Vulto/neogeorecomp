@@ -46,7 +46,7 @@ GameSources := \
 
 GameObjects := $(GameSources:%.c=build/%.o)
 
-.PHONY: all clean test debug runtime neodriftout romcheck run
+.PHONY: all clean test debug runtime neodriftout prepare-rom romcheck run
 
 ifeq ($(SUBMODULES_READY),1)
 
@@ -128,13 +128,19 @@ build/third_party/ymfm/src/ymfm_adpcm.o: override CXXFLAGS += -Wno-unused-parame
 debug: CFLAGS += -g -O0
 debug: clean all
 
+ROM ?=
+ROM_DIR ?= build/roms/neodriftout
+
+prepare-rom:
+	@test -n "$(ROM)" || (echo "usage: make prepare-rom ROM=/path/to/neodrift.zip [ROM_DIR=build/roms/neodriftout]" >&2; exit 2)
+	@sh tools/prepare_neodriftout_roms.sh "$(ROM)" "$(ROM_DIR)"
+
 romcheck:
-	@test -n "$(ROM_DIR)" || (echo "usage: make romcheck ROM_DIR=/path/to/roms" >&2; exit 2)
+	@if [ -n "$(ROM)" ]; then $(MAKE) --no-print-directory prepare-rom ROM="$(ROM)" ROM_DIR="$(ROM_DIR)"; fi
 	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
 
 run: neodriftout
-	@test -n "$(ROM_DIR)" || (echo "usage: make run ROM_DIR=/path/to/roms" >&2; exit 2)
-	@sh tools/check_neodriftout_roms.sh "$(ROM_DIR)"
+	@$(MAKE) --no-print-directory romcheck ROM="$(ROM)" ROM_DIR="$(ROM_DIR)"
 	./neodriftout --rom-path "$(ROM_DIR)"
 
 clean:
