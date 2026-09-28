@@ -31,8 +31,10 @@ public:
             timer_clocks[tnum] -= (int32_t)clocks;
             if (timer_clocks[tnum] <= 0) {
                 timer_clocks[tnum] = -1;
-                if (m_engine)
+                if (m_engine) {
                     m_engine->engine_timer_expired(tnum);
+                    m_engine->engine_check_interrupts();
+                }
             }
         }
     }
