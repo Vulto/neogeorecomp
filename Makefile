@@ -39,6 +39,7 @@ GameSources := \
 	src/neodriftout_main.c \
 	src/neodriftout_palette_override.c \
 	src/neodriftout_runtime_overrides.c \
+	src/neodriftout_missing_dispatch.c \
 	src/neodriftout_gameplay_override.c \
 	$(wildcard games/neodriftout/recomp/*.c) \
 	$(wildcard games/neodriftout/src/autorecomp/*.c)
