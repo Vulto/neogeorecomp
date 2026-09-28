@@ -69,6 +69,7 @@ uint32_t palette_neo_to_argb(uint16_t neo_color);
  * Updated automatically on palette writes for fast rendering.
  */
 const uint32_t *palette_get_argb_table(void);
+const uint32_t *palette_get_shadow_argb_table(void);
 
 /* Get the current backdrop color (last entry in active bank). */
 uint32_t palette_get_backdrop(void);
