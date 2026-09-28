@@ -427,6 +427,28 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        g_m68k.d[0] = 0x80000000u;
+        g_m68k.flag_x = true;
+        g_m68k.flag_c = false;
+        M68K_ROXL32(g_m68k.d[0], 1);
+        if (g_m68k.d[0] != 0x00000001u ||
+            !g_m68k.flag_x || !g_m68k.flag_c) {
+            fprintf(stderr, "[neodriftout] self-test: ROXL32 failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        g_m68k.d[0] = 0x00000001u;
+        g_m68k.flag_x = true;
+        g_m68k.flag_c = false;
+        M68K_ROXR32(g_m68k.d[0], 1);
+        if (g_m68k.d[0] != 0x80000000u ||
+            !g_m68k.flag_x || !g_m68k.flag_c) {
+            fprintf(stderr, "[neodriftout] self-test: ROXR32 failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         neogeo_shutdown();
         printf("Neo Drift Out native runtime self-test passed.\n");
         return 0;
