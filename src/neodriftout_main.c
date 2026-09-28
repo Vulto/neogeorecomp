@@ -603,15 +603,15 @@ int main(int argc, char *argv[]) {
 
             ym2610_write(0, 0x24, 0);
             ym2610_generate(audio_test, 2);
-            ym2610_write(1, 0x03, 0);
+            ym2610_write(1, 0, 0x03);
 
             ym2610_write(0, 0x25, 0);
             ym2610_generate(audio_test, 2);
-            ym2610_write(1, 0xFF, 0);
+            ym2610_write(1, 0, 0xFF);
 
             ym2610_write(0, 0x27, 0);
             ym2610_generate(audio_test, 2);
-            ym2610_write(1, 0x05, 0);
+            ym2610_write(1, 0, 0x05);
 
             ym2610_generate(audio_test, 1);
         }
