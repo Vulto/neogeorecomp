@@ -17,6 +17,7 @@ public:
     }
 
     void ymfm_update_irq(bool asserted) override {
+        s_irq_pending = asserted;
         z80_set_irq(asserted);
     }
 
@@ -51,6 +52,7 @@ static double s_phase;
 static int32_t s_prev;
 static int32_t s_curr;
 static bool s_primed;
+static bool s_irq_pending;
 
 static int16_t clamp16(int32_t value) {
     if (value < -32768) value = -32768;
@@ -73,6 +75,7 @@ extern "C" int ym2610_backend_init(int sample_rate) {
     s_interface.timer_clocks[0] = -1;
     s_interface.timer_clocks[1] = -1;
     z80_set_irq(false);
+    s_irq_pending = false;
     return s_chip_rate != 0 ? 0 : -1;
 }
 
@@ -80,6 +83,7 @@ extern "C" void ym2610_backend_shutdown(void) {
     delete s_chip;
     s_chip = nullptr;
     z80_set_irq(false);
+    s_irq_pending = false;
     s_interface.vrom.clear();
     s_interface.vrom.shrink_to_fit();
 }
@@ -113,6 +117,11 @@ extern "C" void ym2610_backend_reset(void) {
     s_interface.timer_clocks[0] = -1;
     s_interface.timer_clocks[1] = -1;
     z80_set_irq(false);
+    s_irq_pending = false;
+}
+
+extern "C" bool ym2610_backend_irq_pending(void) {
+    return s_irq_pending;
 }
 
 extern "C" void ym2610_backend_generate(int16_t *buffer, int num_samples) {
