@@ -31,6 +31,7 @@ static void func_007EE8(void) {
 /* ----- ROM Path Helpers ----- */
 
 static char s_rom_path[512] = ".";
+static bool s_self_test = false;
 
 static void make_path(char *buf, size_t size, const char *filename) {
     snprintf(buf, size, "%s/%s", s_rom_path, filename);
@@ -276,15 +277,25 @@ int main(int argc, char *argv[]) {
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--rom-path") == 0 && i + 1 < argc) {
             strncpy(s_rom_path, argv[++i], sizeof(s_rom_path) - 1);
+            s_rom_path[sizeof(s_rom_path) - 1] = '\0';
+        } else if (strcmp(argv[i], "--self-test") == 0) {
+            s_self_test = true;
+        } else if (strcmp(argv[i], "--help") == 0) {
+            printf("Usage: %s --rom-path ROM_DIR\\n", argv[0]);
+            printf("       %s --self-test\\n", argv[0]);
+            return 0;
+        } else {
+            fprintf(stderr, "[neodriftout] unknown option: %s\\n", argv[i]);
+            return 2;
         }
     }
 
     /* Initialize the Neo Geo runtime */
     int rc = neogeo_init(&(neogeo_config_t){
-        .rom_path = s_rom_path,
-        .window_scale = 3,
+        .rom_path = s_self_test ? NULL : s_rom_path,
+        .window_scale = s_self_test ? 1 : 3,
         .fullscreen = false,
-        .vsync = true,
+        .vsync = s_self_test ? false : true,
         .mvs_mode = true,
         .region = 0,  /* Japan (region 0 — matches default BIOS config) */
     });
@@ -293,11 +304,14 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    /* Load ROM files */
-    rc = load_roms();
-    if (rc != 0) {
-        fprintf(stderr, "[neodriftout] ROM loading failed\n");
-        return 1;
+    /* The self-test exercises the native executable without game ROMs. */
+    if (!s_self_test) {
+        rc = load_roms();
+        if (rc != 0) {
+            fprintf(stderr, "[neodriftout] ROM loading failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
     }
 
     /* Register BIOS stubs first, then auto-generated game functions */
@@ -376,6 +390,39 @@ int main(int argc, char *argv[]) {
 
     printf("[neodriftout] Registered %u total functions (with hand-written overrides)\n",
            func_table_count());
+
+    if (s_self_test) {
+        uint16_t test16 = 0xA55A;
+        uint32_t test32 = 0x1234CDEF;
+
+        if (func_table_count() < 6000 ||
+            func_table_lookup(0x00068C) == NULL ||
+            func_table_lookup(0x00022C) == NULL ||
+            func_table_lookup(0x007EE8) == NULL) {
+            fprintf(stderr, "[neodriftout] self-test: function table validation failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        bus_write16(0x100100, test16);
+        bus_write32(0x100104, test32);
+        if (bus_read16(0x100100) != test16 || bus_read32(0x100104) != test32) {
+            fprintf(stderr, "[neodriftout] self-test: bus round-trip failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        palette_write(0, 0x7FFF);
+        if (palette_read(0) != 0x7FFF) {
+            fprintf(stderr, "[neodriftout] self-test: palette round-trip failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        neogeo_shutdown();
+        printf("Neo Drift Out native runtime self-test passed.\n");
+        return 0;
+    }
 
     /* Start execution */
     platform_set_title("Neo Drift Out: New Technology [neogeorecomp]");
