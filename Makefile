@@ -73,9 +73,7 @@ all runtime neodriftout test: $(SUBMODULE_READY_STAMP)
 $(SUBMODULE_READY_STAMP): .gitmodules
 	@git submodule sync --recursive
 	@git submodule deinit -f --all >/dev/null 2>&1 || true
-	@if [ -d "games/neodriftout" ] && [ ! -e "games/neodriftout/.git" ]; then rm -rf "games/neodriftout"; fi
-	@if [ -d "third_party/z80" ] && [ ! -e "third_party/z80/.git" ]; then rm -rf "third_party/z80"; fi
-	@if [ -d "third_party/ymfm" ] && [ ! -e "third_party/ymfm/.git" ]; then rm -rf "third_party/ymfm"; fi
+	@rm -rf games/neodriftout third_party/z80 third_party/ymfm
 	@git submodule update --init --recursive
 	@mkdir -p $(@D)
 	@touch $@
