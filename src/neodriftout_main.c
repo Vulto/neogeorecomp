@@ -328,7 +328,9 @@ int main(int argc, char *argv[]) {
     func_table_register(0x01229E, func_01229E);
     extern void func_012202(void);  /* Sprite allocator (with logging) */
     extern void func_01229E(void);  /* Sprite upload synchronization wrapper */
+    extern void func_015256(void);  /* Native sound queue producer */
     func_table_register(0x012202, func_012202);
+    func_table_register(0x015256, func_015256);
     func_table_register(0x011C78, func_011C78);
     func_table_register(0x011C88, func_011C88);
     func_table_register(0x011C98, func_011C98);
