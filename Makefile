@@ -103,6 +103,11 @@ build/src/neodriftout_main.o: override CFLAGS += -Wno-invalid-utf8
 # Keep its warnings visible without allowing them to block this repository's
 # strict compilation gate.
 build/games/neodriftout/%.o: override CFLAGS += -Wno-error=unused-variable
+
+# Auto-generated recompilation C has legacy labels and a non-UTF-8 comment
+# produced by the upstream generator. These diagnostics are scoped to the
+# generated translation units only.
+build/games/neodriftout/src/autorecomp/%.o: override CFLAGS += -Wno-invalid-utf8 -Wno-unused-label -Wno-error=unused-variable
 build/games/neodriftout/recomp/overrides.o: CFLAGS += -Dfunc_01229E=func_01229E_upstream
 build/games/neodriftout/src/autorecomp/recomp_010100_012252.o: CFLAGS += -Dsub_012036=sub_012036_upstream
 
