@@ -208,8 +208,13 @@ void z80_execute(int cycles) {
     unsigned long start = s_cpu.cyc;
     unsigned long target = start + (unsigned long)cycles;
 
-    while (s_cpu.cyc < target)
+    while (s_cpu.cyc < target) {
+        unsigned long before = s_cpu.cyc;
         z80_step(&s_cpu);
+        unsigned long elapsed = s_cpu.cyc - before;
+        if (elapsed != 0)
+            ym2610_tick_timers((int)elapsed);
+    }
 }
 
 void z80_send_command(uint8_t cmd) {
