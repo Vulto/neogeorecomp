@@ -139,6 +139,7 @@ static void bios_vblank_process(void) {
     uint8_t p2_current = (uint8_t)~io_read_p2cnt();
     uint8_t status_raw = io_read_status_b();
     uint8_t status_current = 0;
+    uint8_t status_raw_current = (uint8_t)(~status_raw) & 0x0Fu;
 
     /* BIOS_STATCURNT uses Select/Start bit order and positive logic. */
     status_current = (uint8_t)(~status_raw) & 0x0Fu;
@@ -148,12 +149,14 @@ static void bios_vblank_process(void) {
     static uint8_t prev_p1;
     static uint8_t prev_p2;
     static uint8_t prev_status;
+    static uint8_t prev_status_raw;
     static uint8_t p1_repeat_timers[8];
     static uint8_t p2_repeat_timers[8];
 
     uint8_t p1_change = (uint8_t)(p1_current & (uint8_t)~prev_p1);
     uint8_t p2_change = (uint8_t)(p2_current & (uint8_t)~prev_p2);
     uint8_t status_change = (uint8_t)(status_current & (uint8_t)~prev_status);
+    uint8_t status_raw_change = (uint8_t)(status_raw_current & (uint8_t)~prev_status_raw);
     uint8_t p1_repeat = 0;
     uint8_t p2_repeat = 0;
 
@@ -213,8 +216,8 @@ static void bios_vblank_process(void) {
 
     bus_write8(0x10FDAC, status_current);
     bus_write8(0x10FDAD, status_change);
-    bus_write8(0x10FEDC, status_current);
-    bus_write8(0x10FEDD, status_change);
+    bus_write8(0x10FEDC, status_raw_current);
+    bus_write8(0x10FEDD, status_raw_change);
 
     uint8_t credits = io_get_credits();
     uint8_t p1_start_edge = status_change & 0x02;
@@ -236,6 +239,7 @@ static void bios_vblank_process(void) {
     prev_p1 = p1_current;
     prev_p2 = p2_current;
     prev_status = status_current;
+    prev_status_raw = status_raw_current;
     io_clear_coin_inputs();
 }
 
@@ -595,6 +599,19 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         io_set_button(0, 0x01, false);
+        bios_vblank_process();
+
+        io_set_button(0, IO_BTN_START << 4, true);
+        bios_vblank_process();
+        if (bus_read8(0x10FDAC) != 0x02 ||
+            bus_read8(0x10FDAD) != 0x02 ||
+            bus_read8(0x10FEDC) != 0x02 ||
+            bus_read8(0x10FEDD) != 0x02) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS Start bit mapping failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_button(0, IO_BTN_START << 4, false);
         bios_vblank_process();
 
         io_set_button(0, 0x01, true);
