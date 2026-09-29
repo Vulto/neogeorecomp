@@ -278,7 +278,7 @@ static void bios_lsp_1st(void) {
         bus_write16(0x3C0000, (uint16_t)(0x8000 + spr));
         bus_write16(0x3C0002, 0x0FFF);
         bus_write16(0x3C0000, (uint16_t)(0x8200 + spr));
-        bus_write16(0x3C0002, 0xF800);
+        bus_write16(0x3C0002, 0x0000);
         bus_write16(0x3C0000, (uint16_t)(0x8400 + spr));
         bus_write16(0x3C0002, 0xBE00);
     }
@@ -564,7 +564,7 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         bus_write16(0x3C0000, 0x8201);
-        if (bus_read16(0x3C0002) != 0xF800) {
+        if (bus_read16(0x3C0002) != 0x0000) {
             fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB3 failed\\n");
             neogeo_shutdown();
             return 1;
