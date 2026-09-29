@@ -147,24 +147,68 @@ static void bios_vblank_process(void) {
     static uint8_t prev_p1;
     static uint8_t prev_p2;
     static uint8_t prev_status;
+    static uint8_t p1_repeat_timers[8];
+    static uint8_t p2_repeat_timers[8];
 
     uint8_t p1_change = (uint8_t)(p1_current & (uint8_t)~prev_p1);
     uint8_t p2_change = (uint8_t)(p2_current & (uint8_t)~prev_p2);
     uint8_t status_change = (uint8_t)(status_current & (uint8_t)~prev_status);
+    uint8_t p1_repeat = 0;
+    uint8_t p2_repeat = 0;
+
+    /*
+     * BIOS repeat timing: a newly pressed button repeats immediately,
+     * then after 16 held frames it repeats every 8 frames. Timers are
+     * tracked independently so simultaneously held buttons retain their
+     * own press age.
+     */
+    for (unsigned bit = 0; bit < 8; bit++) {
+        uint8_t mask = (uint8_t)(1u << bit);
+
+        if ((p1_current & mask) == 0) {
+            p1_repeat_timers[bit] = 0;
+        } else if ((p1_change & mask) != 0) {
+            p1_repeat |= mask;
+            p1_repeat_timers[bit] = 16;
+        } else if (prev_p1 & mask) {
+            if (p1_repeat_timers[bit] > 0) {
+                p1_repeat_timers[bit]--;
+                if (p1_repeat_timers[bit] == 0) {
+                    p1_repeat |= mask;
+                    p1_repeat_timers[bit] = 8;
+                }
+            }
+        }
+
+        if ((p2_current & mask) == 0) {
+            p2_repeat_timers[bit] = 0;
+        } else if ((p2_change & mask) != 0) {
+            p2_repeat |= mask;
+            p2_repeat_timers[bit] = 16;
+        } else if (prev_p2 & mask) {
+            if (p2_repeat_timers[bit] > 0) {
+                p2_repeat_timers[bit]--;
+                if (p2_repeat_timers[bit] == 0) {
+                    p2_repeat |= mask;
+                    p2_repeat_timers[bit] = 8;
+                }
+            }
+        }
+    }
 
     bus_write8(0x10FD94, 1);            /* BIOS_P1STATUS: normal joypad */
     bus_write8(0x10FD95, prev_p1);      /* BIOS_P1PREVIOUS */
     bus_write8(0x10FD96, p1_current);   /* BIOS_P1CURRENT */
     bus_write8(0x10FD97, p1_change);    /* BIOS_P1CHANGE */
-    bus_write8(0x10FD98, p1_change);    /* BIOS_P1REPEAT, initial edge */
-    bus_write8(0x10FD99, 0);            /* BIOS_P1TIMER */
+    bus_write8(0x10FD98, p1_repeat);    /* BIOS_P1REPEAT */
+    bus_write8(0x10FD99, p1_repeat_timers[0]); /* BIOS_P1TIMER */
 
     bus_write8(0x10FD9A, 1);
     bus_write8(0x10FD9B, prev_p2);
     bus_write8(0x10FD9C, p2_current);
     bus_write8(0x10FD9D, p2_change);
-    bus_write8(0x10FD9E, p2_change);
-    bus_write8(0x10FD9F, 0);
+    bus_write8(0x10FD9E, p2_repeat);
+    bus_write8(0x10FD9F, p2_repeat_timers[0]);
 
     bus_write8(0x10FDAC, status_current);
     bus_write8(0x10FDAD, status_change);
@@ -429,6 +473,41 @@ int main(int argc, char *argv[]) {
             bus_read8(0x10FD96) != 0x01 ||
             bus_read8(0x10FD97) != 0x01) {
             fprintf(stderr, "[neodriftout] self-test: BIOS input RAM mapping failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_button(0, 0x01, false);
+        bios_vblank_process();
+
+        io_set_button(0, 0x01, true);
+        bios_vblank_process();
+        for (int frame = 0; frame < 15; frame++) {
+            bios_vblank_process();
+            if (bus_read8(0x10FD98) != 0) {
+                fprintf(stderr, "[neodriftout] self-test: BIOS repeat fired too early\\n");
+                neogeo_shutdown();
+                return 1;
+            }
+        }
+        bios_vblank_process();
+        if (bus_read8(0x10FD98) != 0x01 ||
+            bus_read8(0x10FD99) != 8) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS repeat delay failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        for (int frame = 0; frame < 7; frame++)
+            bios_vblank_process();
+        if (bus_read8(0x10FD98) != 0 ||
+            bus_read8(0x10FD99) != 1) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS repeat period failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bios_vblank_process();
+        if (bus_read8(0x10FD98) != 0x01 ||
+            bus_read8(0x10FD99) != 8) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS repeat period failed\\n");
             neogeo_shutdown();
             return 1;
         }
