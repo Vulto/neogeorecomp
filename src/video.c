@@ -411,6 +411,7 @@ void video_render_frame(uint32_t *framebuffer) {
         int x;
         int y;
         int height;
+        bool special_size_33;
         uint8_t v_shrink;
         uint8_t h_shrink;
         bool valid;
@@ -438,6 +439,7 @@ void video_render_frame(uint32_t *framebuffer) {
 
         sprites[spr].x = x;
         sprites[spr].y = y;
+        sprites[spr].special_size_33 = height == 33;
         sprites[spr].height = height == 33 ? 32 : height;
         sprites[spr].v_shrink = (uint8_t)(scb2 & 0xFF);
         sprites[spr].h_shrink = (uint8_t)((scb2 >> 8) & 0x0F);
@@ -454,6 +456,7 @@ void video_render_frame(uint32_t *framebuffer) {
                 (sprites[spr - 1].x + sprites[spr - 1].h_shrink + 1) & 0x1FF;
             sprites[spr].y = sprites[spr - 1].y;
             sprites[spr].height = sprites[spr - 1].height;
+            sprites[spr].special_size_33 = sprites[spr - 1].special_size_33;
             sprites[spr].v_shrink = sprites[spr - 1].v_shrink;
         }
     }
@@ -503,7 +506,7 @@ void video_render_frame(uint32_t *framebuffer) {
             int zoom_line = sprite_line & 0xFF;
             bool invert = (sprite_line & 0x100) != 0;
 
-            if (state->height > 32) {
+            if (state->special_size_33) {
                 int period = ((int)state->v_shrink + 1) << 1;
                 zoom_line %= period;
                 if (zoom_line > state->v_shrink) {
