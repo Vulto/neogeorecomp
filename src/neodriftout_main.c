@@ -878,10 +878,7 @@ int main(int argc, char *argv[]) {
             neogeo_shutdown();
             return 1;
         }
-        {
-            int16_t busy_test[4] = {0, 0, 0, 0};
-            ym2610_generate(busy_test, 2);
-        }
+        ym2610_tick_timers(200);
         if (ym2610_read(0) & 0x80) {
             fprintf(stderr, "[neodriftout] self-test: YM2610 BUSY did not clear\\n");
             neogeo_shutdown();
@@ -893,18 +890,18 @@ int main(int argc, char *argv[]) {
             int16_t audio_test[4] = {0, 0, 0, 0};
 
             ym2610_write(0, 0x25, 0);
-            ym2610_generate(audio_test, 2);
+            ym2610_tick_timers(20);
             ym2610_write(1, 0, 0x03);
 
             ym2610_write(0, 0x24, 0);
-            ym2610_generate(audio_test, 2);
+            ym2610_tick_timers(20);
             ym2610_write(1, 0, 0xFF);
 
             ym2610_write(0, 0x27, 0);
-            ym2610_generate(audio_test, 2);
+            ym2610_tick_timers(20);
             ym2610_write(1, 0, 0x05);
 
-            ym2610_generate(audio_test, 4);
+            ym2610_tick_timers(1000);
         }
         uint8_t ym2610_status = ym2610_read(0);
         if ((ym2610_status & 0x01) == 0 || !ym2610_irq_pending()) {
