@@ -15,8 +15,9 @@
 
 /* ----- Internal State ----- */
 
-static uint32_t s_timer_reload = 0;    /* Timer reload value */
+static uint32_t s_timer_reload = 0;    /* REG_TIMERHIGH/LOW */
 static uint32_t s_timer_counter = 0;   /* Current timer counter */
+static uint16_t s_timer_mode = 0;      /* REG_LSPCMODE timer bits */
 static bool s_timer_stop_border = false;
 
 static bool s_vblank_pending = false;
@@ -41,6 +42,7 @@ int timer_init(void) {
     s_timer_reload = 0;
     s_timer_counter = 0;
     s_timer_stop_border = false;
+    s_timer_mode = 0;
     s_vblank_pending = false;
     s_timer_pending = false;
     s_scanline = 0;
@@ -57,6 +59,20 @@ void timer_shutdown(void) {
 void timer_set_reload(uint32_t value) {
     s_timer_reload = value;
     s_timer_counter = value;
+}
+
+void timer_write_reload_high(uint16_t value) {
+    s_timer_reload = (s_timer_reload & 0x0000FFFFu) | ((uint32_t)value << 16);
+}
+
+void timer_write_reload_low(uint16_t value) {
+    s_timer_reload = (s_timer_reload & 0xFFFF0000u) | value;
+    if (s_timer_mode & 0x0020u)
+        s_timer_counter = s_timer_reload;
+}
+
+void timer_set_mode(uint16_t mode) {
+    s_timer_mode = mode;
 }
 
 uint32_t timer_get_counter(void) {
@@ -94,6 +110,8 @@ void timer_tick_scanline(void) {
     /* Fire VBlank interrupt at the start of the blanking period */
     if (s_scanline == VBLANK_START_LINE) {
         s_vblank_pending = true;
+        if (s_timer_mode & 0x0040u)
+            s_timer_counter = s_timer_reload;
     }
 
     /* Decrement the timer counter */
@@ -104,8 +122,11 @@ void timer_tick_scanline(void) {
                 s_timer_counter -= TIMER_TICKS_PER_SCANLINE;
             } else {
                 s_timer_counter = 0;
-                s_timer_pending = true;
-                s_timer_counter = s_timer_reload;  /* Auto-reload */
+                if (s_timer_mode & 0x0010u) {
+                    s_timer_pending = true;
+                    if (s_timer_mode & 0x0080u)
+                        s_timer_counter = s_timer_reload;
+                }
             }
         }
     }
