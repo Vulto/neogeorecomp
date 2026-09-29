@@ -514,6 +514,14 @@ int main(int argc, char *argv[]) {
         io_set_button(0, 0x01, false);
         bios_vblank_process();
 
+        video_set_lspc_mode(0x0010);
+        if ((video_get_lspc_mode() >> 7) != timer_get_scanline() ||
+            (video_get_lspc_mode() & 0x007F) != 0x0010) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC raster counter read failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         palette_write(0, 0x7FFF);
         if (palette_read(0) != 0x7FFF) {
             fprintf(stderr, "[neodriftout] self-test: palette round-trip failed\n");
