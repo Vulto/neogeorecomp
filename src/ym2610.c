@@ -96,7 +96,7 @@ void ym2610_generate(int16_t *buffer, int num_samples) {
 }
 
 void ym2610_tick_timers(int cycles) {
-    (void)cycles;
+    ym2610_backend_tick_timers(cycles);
 }
 
 int ym2610_irq_pending(void) {
