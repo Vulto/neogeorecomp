@@ -267,8 +267,13 @@ static void bios_clear_fix(void) {
     /* Clear the fix layer tilemap in VRAM ($7000-$74FF) */
     bus_write16(0x3C0004, 0x0001);  /* VRAM modulo = 1 */
     bus_write16(0x3C0000, 0x7000);  /* VRAM address = fix layer start */
-    for (int i = 0; i < 0x500; i++) {
-        bus_write16(0x3C0002, 0x0020);  /* Space tile (empty) */
+    for (int col = 0; col < NEOGEO_FIX_COLS; col++) {
+        for (int row = 0; row < NEOGEO_FIX_ROWS; row++) {
+            uint16_t tile = (col == 0 || col == NEOGEO_FIX_COLS - 1)
+                ? 0x0020
+                : 0x00FF;
+            bus_write16(0x3C0002, tile);
+        }
     }
 }
 
@@ -536,6 +541,29 @@ int main(int argc, char *argv[]) {
         bios_credit_down();
         if (io_get_credits() != 1) {
             fprintf(stderr, "[neodriftout] self-test: BIOS credit down failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        bus_write16(0x3C0004, 0x0001);
+        bus_write16(0x3C0000, 0x7000);
+        bus_write16(0x3C0002, 0x1234);
+        bios_clear_fix();
+        bus_write16(0x3C0000, 0x7000);
+        if (bus_read16(0x3C0002) != 0x0020) {
+            fprintf(stderr, "[neodriftout] self-test: FIX_CLEAR left column failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x7020);
+        if (bus_read16(0x3C0002) != 0x00FF) {
+            fprintf(stderr, "[neodriftout] self-test: FIX_CLEAR interior failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x74E0);
+        if (bus_read16(0x3C0002) != 0x0020) {
+            fprintf(stderr, "[neodriftout] self-test: FIX_CLEAR right column failed\\n");
             neogeo_shutdown();
             return 1;
         }
