@@ -140,11 +140,10 @@ static void bios_vblank_process(void) {
     uint8_t status_raw = io_read_status_b();
     uint8_t status_current = 0;
 
-    /* BIOS_STATCURNT uses Start/Select order, positive logic. */
-    status_current |= (uint8_t)((((uint8_t)~status_raw) >> 1) & 0x01);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x01) << 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x08) >> 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x04) << 1);
+    /* BIOS_STATCURNT uses Select/Start bit order and positive logic. */
+    status_current = (uint8_t)(~status_raw) & 0x0Fu;
+    if (bus_read8(0x10FD82) == 0x80)
+        status_current &= 0x0Au; /* MVS BIOS suppresses Select bits. */
 
     static uint8_t prev_p1;
     static uint8_t prev_p2;
@@ -218,7 +217,7 @@ static void bios_vblank_process(void) {
     bus_write8(0x10FEDD, status_change);
 
     uint8_t credits = io_get_credits();
-    uint8_t p1_start_edge = status_change & 0x01;
+    uint8_t p1_start_edge = status_change & 0x02;
 
     /*
      * MVS flow: a Start edge consumes one credit. AES does not require
