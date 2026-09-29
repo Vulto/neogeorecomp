@@ -524,7 +524,14 @@ int main(int argc, char *argv[]) {
         }
         timer_irq_ack(0x02);
         timer_set_mode(0x0010);
+        timer_set_reload(5000);
         timer_write_reload_low(1000);
+        if (timer_get_counter() != 5000) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC low-write incorrectly reloaded counter\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        timer_set_reload(1000);
         timer_irq_ack(0x02);
         timer_tick_scanline();
         timer_tick_scanline();
