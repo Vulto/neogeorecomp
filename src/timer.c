@@ -122,11 +122,10 @@ void timer_tick_scanline(void) {
                 s_timer_counter -= TIMER_TICKS_PER_SCANLINE;
             } else {
                 s_timer_counter = 0;
-                if (s_timer_mode & 0x0010u) {
+                if (s_timer_mode & 0x0010u)
                     s_timer_pending = true;
-                    if (s_timer_mode & 0x0080u)
-                        s_timer_counter = s_timer_reload;
-                }
+                if (s_timer_mode & 0x0080u)
+                    s_timer_counter = s_timer_reload;
             }
         }
     }
