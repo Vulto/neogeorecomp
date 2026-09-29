@@ -152,12 +152,15 @@ static void bios_vblank_process(void) {
     static uint8_t prev_p1;
     static uint8_t prev_p2;
     static uint8_t prev_status;
+    static uint8_t prev_status_raw;
     static uint8_t p1_repeat_timers[8];
     static uint8_t p2_repeat_timers[8];
 
     uint8_t p1_change = (uint8_t)(p1_current & (uint8_t)~prev_p1);
     uint8_t p2_change = (uint8_t)(p2_current & (uint8_t)~prev_p2);
     uint8_t status_change = (uint8_t)(status_current & (uint8_t)~prev_status);
+    uint8_t status_raw_change =
+        (uint8_t)(status_raw_current & (uint8_t)~prev_status_raw);
     uint8_t p1_repeat = 0;
     uint8_t p2_repeat = 0;
 
@@ -217,8 +220,8 @@ static void bios_vblank_process(void) {
 
     bus_write8(0x10FDAC, status_current);
     bus_write8(0x10FDAD, status_change);
-    bus_write8(0x10FEDC, status_current);
-    bus_write8(0x10FEDD, status_change);
+    bus_write8(0x10FEDC, status_raw_current);
+    bus_write8(0x10FEDD, status_raw_change);
 
     uint8_t credits = io_get_credits();
     uint8_t p1_start_edge = status_change & 0x80;
@@ -240,6 +243,7 @@ static void bios_vblank_process(void) {
     prev_p1 = p1_current;
     prev_p2 = p2_current;
     prev_status = status_current;
+    prev_status_raw = status_raw_current;
     io_clear_coin_inputs();
 }
 
