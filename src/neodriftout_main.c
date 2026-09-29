@@ -254,10 +254,35 @@ static void bios_process_requests(void) {
      * For now, just a no-op. */
 }
 
-/* $C00450 — BIOS: hardware test / controller detection */
-static void bios_hw_test(void) {
-    /* Write test result to $10FDB0 */
-    bus_write32(0x10FDB0, 0);  /* No special hardware detected */
+static unsigned bios_bcd_to_decimal(uint8_t value) {
+    return (unsigned)(value >> 4) * 10u + (unsigned)(value & 0x0Fu);
+}
+
+/* $C00450 — CREDIT_CHECK */
+static void bios_credit_check(void) {
+    uint8_t p1 = bus_read8(0x10FDB0);
+    uint8_t p2 = bus_read8(0x10FDB1);
+    unsigned credits = io_get_credits();
+
+    if (bios_bcd_to_decimal(p1) > credits)
+        bus_write8(0x10FDB0, 0);
+    if (bios_bcd_to_decimal(p2) > credits)
+        bus_write8(0x10FDB1, 0);
+}
+
+/* $C00456 — CREDIT_DOWN */
+static void bios_credit_down(void) {
+    uint8_t requests[2] = {
+        bus_read8(0x10FDB0),
+        bus_read8(0x10FDB1)
+    };
+
+    for (unsigned player = 0; player < 2; player++) {
+        unsigned count = bios_bcd_to_decimal(requests[player]);
+        while (count-- != 0)
+            if (!io_consume_credit())
+                break;
+    }
 }
 
 void neodriftout_register_missing_dispatch_targets(void);
@@ -268,7 +293,8 @@ static void register_bios_stubs(void) {
     func_table_register(0xC0044A, bios_vblank_process);
     func_table_register(0xC004C2, bios_clear_fix);
     func_table_register(0xC004C8, bios_process_requests);
-    func_table_register(0xC00450, bios_hw_test);
+    func_table_register(0xC00450, bios_credit_check);
+    func_table_register(0xC00456, bios_credit_down);
     printf("[neodriftout] Registered 6 BIOS stubs\n");
 }
 
