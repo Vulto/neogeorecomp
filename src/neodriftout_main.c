@@ -514,6 +514,33 @@ int main(int argc, char *argv[]) {
         io_set_button(0, 0x01, false);
         bios_vblank_process();
 
+        timer_set_mode(0x0030);
+        timer_write_reload_high(0);
+        timer_write_reload_low(1000);
+        if (timer_get_counter() != 1000) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC immediate timer reload failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        timer_irq_ack(0x02);
+        timer_set_mode(0x0010);
+        timer_write_reload_low(1000);
+        timer_irq_ack(0x02);
+        timer_tick_scanline();
+        timer_tick_scanline();
+        if (timer_timer_pending()) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC timer fired too early\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        timer_tick_scanline();
+        if (!timer_timer_pending()) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC timer IRQ failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        timer_irq_ack(0x02);
+
         palette_write(0, 0x7FFF);
         if (palette_read(0) != 0x7FFF) {
             fprintf(stderr, "[neodriftout] self-test: palette round-trip failed\n");
