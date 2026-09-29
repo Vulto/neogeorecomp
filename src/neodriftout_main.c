@@ -140,21 +140,27 @@ static void bios_vblank_process(void) {
     uint8_t status_raw = io_read_status_b();
     uint8_t status_current = 0;
 
-    /* BIOS_STATCURNT uses Start/Select order, positive logic. */
-    status_current |= (uint8_t)((((uint8_t)~status_raw) >> 1) & 0x01);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x01) << 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x08) >> 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x04) << 1);
+    uint8_t status_positive = (uint8_t)~status_raw;
+    uint8_t status_raw_current = (uint8_t)(status_positive & 0x0F);
+
+    /* BIOS_STATCURNT maps P1/P2 Start/Select into bits 7..4. */
+    status_current = (uint8_t)((status_raw_current & 0x0A) << 6);
+
+    /* MVS does not expose Select in BIOS_STATCURNT. */
+    status_current &= 0xAA;
 
     static uint8_t prev_p1;
     static uint8_t prev_p2;
     static uint8_t prev_status;
+    static uint8_t prev_status_raw;
     static uint8_t p1_repeat_timers[8];
     static uint8_t p2_repeat_timers[8];
 
     uint8_t p1_change = (uint8_t)(p1_current & (uint8_t)~prev_p1);
     uint8_t p2_change = (uint8_t)(p2_current & (uint8_t)~prev_p2);
     uint8_t status_change = (uint8_t)(status_current & (uint8_t)~prev_status);
+    uint8_t status_raw_change =
+        (uint8_t)(status_raw_current & (uint8_t)~prev_status_raw);
     uint8_t p1_repeat = 0;
     uint8_t p2_repeat = 0;
 
@@ -214,11 +220,11 @@ static void bios_vblank_process(void) {
 
     bus_write8(0x10FDAC, status_current);
     bus_write8(0x10FDAD, status_change);
-    bus_write8(0x10FEDC, status_current);
-    bus_write8(0x10FEDD, status_change);
+    bus_write8(0x10FEDC, status_raw_current);
+    bus_write8(0x10FEDD, status_raw_change);
 
     uint8_t credits = io_get_credits();
-    uint8_t p1_start_edge = status_change & 0x01;
+    uint8_t p1_start_edge = status_change & 0x80;
 
     /*
      * MVS flow: a Start edge consumes one credit. AES does not require
@@ -237,6 +243,7 @@ static void bios_vblank_process(void) {
     prev_p1 = p1_current;
     prev_p2 = p2_current;
     prev_status = status_current;
+    prev_status_raw = status_raw_current;
     io_clear_coin_inputs();
 }
 
@@ -244,10 +251,10 @@ static void bios_vblank_process(void) {
 static void bios_controller_setup(void) {
     /* MVS uses hard DIP 3 to select the single-player Mahjong controller. */
     if ((io_read_dipsw() & 0x04) == 0) {
-        s_p1_controller_status = 0;
+        s_p1_controller_status = 3;
         s_p2_controller_status = 0;
     } else {
-        s_p1_controller_status = 3;
+        s_p1_controller_status = 0;
         s_p2_controller_status = 0;
     }
 
@@ -570,7 +577,8 @@ int main(int argc, char *argv[]) {
         }
 
         video_set_lspc_mode(0x0010);
-        if ((video_get_lspc_mode() >> 7) != timer_get_scanline() ||
+        if ((video_get_lspc_mode() >> 7) !=
+                ((timer_get_scanline() + 0x00F8u) & 0x01FFu) ||
             (video_get_lspc_mode() & 0x007F) != 0x0010) {
             fprintf(stderr, "[neodriftout] self-test: LSPC raster counter read failed\\n");
             neogeo_shutdown();
@@ -588,7 +596,7 @@ int main(int argc, char *argv[]) {
         bios_vblank_process();
         io_set_button(0, 0x01, true);
         bios_vblank_process();
-        if (bus_read8(0x10FD94) != 1 ||
+        if (bus_read8(0x10FD94) != 0 ||
             bus_read8(0x10FD96) != 0x01 ||
             bus_read8(0x10FD97) != 0x01) {
             fprintf(stderr, "[neodriftout] self-test: BIOS input RAM mapping failed\n");
@@ -596,6 +604,19 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         io_set_button(0, 0x01, false);
+        bios_vblank_process();
+
+        io_set_button(0, IO_BTN_START << 4, true);
+        bios_vblank_process();
+        if (bus_read8(0x10FDAC) != 0x80 ||
+            bus_read8(0x10FDAD) != 0x80 ||
+            bus_read8(0x10FEDC) != 0x02 ||
+            bus_read8(0x10FEDD) != 0x02) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS Start mapping failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_button(0, IO_BTN_START << 4, false);
         bios_vblank_process();
 
         io_set_button(0, 0x01, true);
