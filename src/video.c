@@ -229,7 +229,7 @@ void video_set_lspc_mode(uint16_t mode) {
 }
 
 uint16_t video_get_lspc_mode(void) {
-    uint16_t raster = (uint16_t)(timer_get_scanline() & 0x01FFu);
+    uint16_t raster = (uint16_t)((timer_get_scanline() + 0x00F8u) & 0x01FFu);
     return (uint16_t)((raster << 7) | (s_lspc_mode & 0x007Fu));
 }
 
