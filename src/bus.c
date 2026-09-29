@@ -469,9 +469,12 @@ void bus_write16(uint32_t addr, uint16_t val) {
             case 0x3C0000: video_set_vram_addr(val); break;
             case 0x3C0002: video_write_vram(val); break;
             case 0x3C0004: video_set_vram_mod(val); break;
-            case 0x3C0006: video_set_lspc_mode(val); break;
-            case 0x3C0008: timer_set_reload((timer_get_counter() & 0x0000FFFF) | ((uint32_t)val << 16)); break;
-            case 0x3C000A: timer_set_reload((timer_get_counter() & 0xFFFF0000) | val); break;
+            case 0x3C0006:
+                video_set_lspc_mode(val);
+                timer_set_mode(val);
+                break;
+            case 0x3C0008: timer_write_reload_high(val); break;
+            case 0x3C000A: timer_write_reload_low(val); break;
             case 0x3C000C: timer_irq_ack((uint8_t)(val & 0x07)); break;
             case 0x3C000E: timer_set_stop_on_border(val & 1); break;
             default:

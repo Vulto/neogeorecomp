@@ -42,6 +42,9 @@ void timer_shutdown(void);
 
 /* Set the 32-bit timer reload value. */
 void timer_set_reload(uint32_t value);
+void timer_write_reload_high(uint16_t value);
+void timer_write_reload_low(uint16_t value);
+void timer_set_mode(uint16_t mode);
 
 /* Read the current timer counter value. */
 uint32_t timer_get_counter(void);
