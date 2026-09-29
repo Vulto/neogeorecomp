@@ -125,6 +125,13 @@ extern "C" uint8_t ym2610_backend_read(uint8_t port) {
     return s_chip ? s_chip->read(port & 3) : 0xFF;
 }
 
+extern "C" void ym2610_backend_tick_timers(int z80_cycles) {
+    if (z80_cycles <= 0)
+        return;
+
+    s_interface.advance_timers((double)z80_cycles * 2.0);
+}
+
 extern "C" void ym2610_backend_reset(void) {
     if (!s_chip)
         return;
@@ -161,7 +168,6 @@ extern "C" void ym2610_backend_generate(int16_t *buffer, int num_samples) {
         s_curr[1] = sample.data[1];
         s_prev[0] = s_curr[0];
         s_prev[1] = s_curr[1];
-        s_interface.advance_timers(8000000.0 / (double)s_chip_rate);
         s_primed = true;
     }
 
@@ -176,8 +182,6 @@ extern "C" void ym2610_backend_generate(int16_t *buffer, int num_samples) {
             s_chip->generate(&sample);
             s_curr[0] = sample.data[0];
             s_curr[1] = sample.data[1];
-            s_interface.advance_timers(8000000.0 / (double)s_chip_rate);
-
             s_phase -= 1.0;
         }
 
