@@ -262,15 +262,17 @@ static void bios_lsp_1st(void) {
         bus_write16(0x3C0002, 0x0FFF);
 
         bus_write16(0x3C0000, (uint16_t)(0x8200 + spr));
-        bus_write16(0x3C0002, 0x0000);
+        bus_write16(0x3C0002, 0xF800);
 
         bus_write16(0x3C0000, (uint16_t)(0x8400 + spr));
         bus_write16(0x3C0002, 0xBE00);
     }
 
     bus_write16(0x3C0000, 0x0000);
-    for (unsigned i = 0; i < 32; i++)
+    for (unsigned i = 0; i < 32; i++) {
         bus_write16(0x3C0002, 0x00FF);
+        bus_write16(0x3C0002, 0x0000);
+    }
 }
 
 /* $C00450 — BIOS: hardware test / controller detection */
