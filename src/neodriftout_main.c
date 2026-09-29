@@ -887,8 +887,6 @@ int main(int argc, char *argv[]) {
 
         ym2610_reset();
         {
-            int16_t audio_test[4] = {0, 0, 0, 0};
-
             ym2610_write(0, 0x25, 0);
             ym2610_tick_timers(20);
             ym2610_write(1, 0, 0x03);
