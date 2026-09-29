@@ -444,7 +444,14 @@ void video_render_frame(uint32_t *framebuffer) {
         sprites[spr].valid = height != 0;
 
         if (sticky && spr > 0 && sprites[spr - 1].valid) {
-            sprites[spr].x = (sprites[spr - 1].x + 16) & 0x1FF;
+            /*
+             * Sticky sprites are placed immediately after the previous
+             * sprite's displayed width. Horizontal shrinking is not
+             * inherited, so use the previous sprite's own SCB2 width:
+             * $0 = 1 pixel ... $F = 16 pixels.
+             */
+            sprites[spr].x =
+                (sprites[spr - 1].x + sprites[spr - 1].h_shrink + 1) & 0x1FF;
             sprites[spr].y = sprites[spr - 1].y;
             sprites[spr].height = sprites[spr - 1].height;
             sprites[spr].v_shrink = sprites[spr - 1].v_shrink;
