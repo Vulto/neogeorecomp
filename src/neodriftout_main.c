@@ -34,6 +34,8 @@ static void func_007EE8(void) {
 
 static char s_rom_path[512] = ".";
 static bool s_self_test = false;
+static uint8_t s_p1_controller_status = 1;
+static uint8_t s_p2_controller_status = 1;
 
 static void make_path(char *buf, size_t size, const char *filename) {
     snprintf(buf, size, "%s/%s", s_rom_path, filename);
@@ -196,14 +198,14 @@ static void bios_vblank_process(void) {
         }
     }
 
-    bus_write8(0x10FD94, 1);            /* BIOS_P1STATUS: normal joypad */
+    bus_write8(0x10FD94, s_p1_controller_status);
     bus_write8(0x10FD95, prev_p1);      /* BIOS_P1PREVIOUS */
     bus_write8(0x10FD96, p1_current);   /* BIOS_P1CURRENT */
     bus_write8(0x10FD97, p1_change);    /* BIOS_P1CHANGE */
     bus_write8(0x10FD98, p1_repeat);    /* BIOS_P1REPEAT */
     bus_write8(0x10FD99, p1_repeat_timers[0]); /* BIOS_P1TIMER */
 
-    bus_write8(0x10FD9A, 1);
+    bus_write8(0x10FD9A, s_p2_controller_status);
     bus_write8(0x10FD9B, prev_p2);
     bus_write8(0x10FD9C, p2_current);
     bus_write8(0x10FD9D, p2_change);
@@ -236,6 +238,18 @@ static void bios_vblank_process(void) {
     prev_p2 = p2_current;
     prev_status = status_current;
     io_clear_coin_inputs();
+}
+
+/* $C004D4 — CONTROLLER_SETUP */
+static void bios_controller_setup(void) {
+    /* MVS uses hard DIP 3 to select the single-player Mahjong controller. */
+    if (io_read_dipsw() & 0x04) {
+        s_p1_controller_status = 0;
+        s_p2_controller_status = 0;
+    } else {
+        s_p1_controller_status = 3;
+        s_p2_controller_status = 0;
+    }
 }
 
 /* $C004C2 — BIOS: clear fix layer */
@@ -307,6 +321,7 @@ static void register_bios_stubs(void) {
     func_table_register(0xC004C8, bios_lsp_1st);
     func_table_register(0xC00450, bios_credit_check);
     func_table_register(0xC00456, bios_credit_down);
+    func_table_register(0xC004D4, bios_controller_setup);
     printf("[neodriftout] Registered 6 BIOS stubs\n");
 }
 
@@ -514,6 +529,22 @@ int main(int argc, char *argv[]) {
             neogeo_shutdown();
             return 1;
         }
+
+        bios_controller_setup();
+        if (bus_read8(0x10FD94) != 0 || bus_read8(0x10FD9A) != 0) {
+            fprintf(stderr, "[neodriftout] self-test: controller setup default failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_dipsw(0xFB);
+        bios_controller_setup();
+        if (bus_read8(0x10FD94) != 3 || bus_read8(0x10FD9A) != 0) {
+            fprintf(stderr, "[neodriftout] self-test: Mahjong controller setup failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_dipsw(0xFF);
+        bios_controller_setup();
 
         bios_lsp_1st();
         bus_write16(0x3C0000, 0x8001);
