@@ -909,6 +909,16 @@ int main(int argc, char *argv[]) {
         }
         ym2610_reset();
 
+        timer_init();
+        timer_set_reload(1);
+        timer_set_mode(0x0080u);
+        timer_tick_scanline();
+        if (timer_get_counter() != 1 || timer_timer_pending()) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC timer repeat reload failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         io_queue_start();
         bus_write16(0x10041A, 0);
         if (bus_read16(0x10041A) != 1) {
