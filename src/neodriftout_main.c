@@ -570,7 +570,8 @@ int main(int argc, char *argv[]) {
         }
 
         video_set_lspc_mode(0x0010);
-        if ((video_get_lspc_mode() >> 7) != timer_get_scanline() ||
+        if ((video_get_lspc_mode() >> 7) !=
+                ((timer_get_scanline() + 0x00F8u) & 0x01FFu) ||
             (video_get_lspc_mode() & 0x007F) != 0x0010) {
             fprintf(stderr, "[neodriftout] self-test: LSPC raster counter read failed\\n");
             neogeo_shutdown();
