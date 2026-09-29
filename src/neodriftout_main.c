@@ -243,7 +243,7 @@ static void bios_vblank_process(void) {
 /* $C004D4 — CONTROLLER_SETUP */
 static void bios_controller_setup(void) {
     /* MVS uses hard DIP 3 to select the single-player Mahjong controller. */
-    if ((io_read_dipsw() & 0x04) != 0) {
+    if ((io_read_dipsw() & 0x04) == 0) {
         s_p1_controller_status = 0;
         s_p2_controller_status = 0;
     } else {
