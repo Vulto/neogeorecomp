@@ -484,6 +484,25 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        io_insert_coin(0);
+        io_insert_coin(0);
+        io_insert_coin(0);
+        bus_write8(0x10FDB0, 0x02);
+        bus_write8(0x10FDB1, 0x04);
+        bios_credit_check();
+        if (bus_read8(0x10FDB0) != 0x02 ||
+            bus_read8(0x10FDB1) != 0x00) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS credit check failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bios_credit_down();
+        if (io_get_credits() != 1) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS credit down failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         bus_write16(0x100100, test16);
         bus_write32(0x100104, test32);
         if (bus_read16(0x100100) != test16 || bus_read32(0x100104) != test32) {
