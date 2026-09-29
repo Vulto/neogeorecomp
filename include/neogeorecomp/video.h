@@ -5,7 +5,7 @@
  * layers. Everything is drawn with sprites, except for a fixed text
  * overlay (the "fix layer"). The LSPC manages:
  *
- *   - 381 sprites per frame (96 per scanline)
+ *   - 380 usable sprites per frame (96 per scanline)
  *   - Each sprite is a vertical strip: 1 tile wide, up to 32 tiles tall
  *   - Tiles are 16x16 pixels, 4bpp (16 colors from a 256-palette pool)
  *   - Sprites can be chained horizontally via a "sticky bit"
@@ -41,7 +41,7 @@ extern "C" {
 
 #define NEOGEO_SCREEN_WIDTH   320
 #define NEOGEO_SCREEN_HEIGHT  224
-#define NEOGEO_MAX_SPRITES    381
+#define NEOGEO_MAX_SPRITES    380
 #define NEOGEO_MAX_SCANLINE_SPRITES 96
 #define NEOGEO_FIX_COLS       40
 #define NEOGEO_FIX_ROWS       32
@@ -106,7 +106,7 @@ uint16_t video_get_lspc_mode(void);
 /*
  * Render the current frame.
  *
- * Processes all 381 sprite entries from SCB1-4 and the fix layer,
+ * Processes all 380 usable sprite entries from SCB1-4 and the fix layer,
  * compositing them into the framebuffer. Respects sprite priority
  * (lower-numbered sprites have higher priority), shrinking, chaining,
  * and auto-animation.
