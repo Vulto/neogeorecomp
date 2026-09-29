@@ -248,16 +248,53 @@ static void bios_clear_fix(void) {
     }
 }
 
-/* $C004C8 — BIOS: process system requests */
-static void bios_process_requests(void) {
-    /* Handles coin counting, timer updates, etc.
-     * For now, just a no-op. */
+/* $C004C8 — LSP_1ST: initialize the sprite control blocks */
+static void bios_lsp_1st(void) {
+    for (uint16_t spr = 0; spr <= NEOGEO_MAX_SPRITES; spr++) {
+        bus_write16(0x3C0000, (uint16_t)(0x8000 + spr));
+        bus_write16(0x3C0002, 0x0FFF);
+        bus_write16(0x3C0000, (uint16_t)(0x8200 + spr));
+        bus_write16(0x3C0002, 0xF800);
+        bus_write16(0x3C0000, (uint16_t)(0x8400 + spr));
+        bus_write16(0x3C0002, 0xBE00);
+    }
+
+    bus_write16(0x3C0000, 0x0000);
+    for (unsigned i = 0; i < 32; i++) {
+        bus_write16(0x3C0002, 0x00FF);
+        bus_write16(0x3C0002, 0x0000);
+    }
 }
 
-/* $C00450 — BIOS: hardware test / controller detection */
-static void bios_hw_test(void) {
-    /* Write test result to $10FDB0 */
-    bus_write32(0x10FDB0, 0);  /* No special hardware detected */
+static unsigned bios_bcd_to_decimal(uint8_t value) {
+    return (unsigned)(value >> 4) * 10u + (unsigned)(value & 0x0Fu);
+}
+
+/* $C00450 — CREDIT_CHECK */
+static void bios_credit_check(void) {
+    uint8_t p1 = bus_read8(0x10FDB0);
+    uint8_t p2 = bus_read8(0x10FDB1);
+    unsigned credits = io_get_credits();
+
+    if (bios_bcd_to_decimal(p1) > credits)
+        bus_write8(0x10FDB0, 0);
+    if (bios_bcd_to_decimal(p2) > credits)
+        bus_write8(0x10FDB1, 0);
+}
+
+/* $C00456 — CREDIT_DOWN */
+static void bios_credit_down(void) {
+    uint8_t requests[2] = {
+        bus_read8(0x10FDB0),
+        bus_read8(0x10FDB1)
+    };
+
+    for (unsigned player = 0; player < 2; player++) {
+        unsigned count = bios_bcd_to_decimal(requests[player]);
+        while (count-- != 0)
+            if (!io_consume_credit())
+                break;
+    }
 }
 
 void neodriftout_register_missing_dispatch_targets(void);
@@ -267,8 +304,9 @@ static void register_bios_stubs(void) {
     func_table_register(0xC00444, bios_return_to_system);
     func_table_register(0xC0044A, bios_vblank_process);
     func_table_register(0xC004C2, bios_clear_fix);
-    func_table_register(0xC004C8, bios_process_requests);
-    func_table_register(0xC00450, bios_hw_test);
+    func_table_register(0xC004C8, bios_lsp_1st);
+    func_table_register(0xC00450, bios_credit_check);
+    func_table_register(0xC00456, bios_credit_down);
     printf("[neodriftout] Registered 6 BIOS stubs\n");
 }
 
@@ -454,6 +492,53 @@ int main(int argc, char *argv[]) {
             func_table_lookup(0x00022C) == NULL ||
             func_table_lookup(0x007EE8) == NULL) {
             fprintf(stderr, "[neodriftout] self-test: function table validation failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        io_insert_coin(0);
+        io_insert_coin(0);
+        io_insert_coin(0);
+        bus_write8(0x10FDB0, 0x02);
+        bus_write8(0x10FDB1, 0x04);
+        bios_credit_check();
+        if (bus_read8(0x10FDB0) != 0x02 ||
+            bus_read8(0x10FDB1) != 0x00) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS credit check failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bios_credit_down();
+        if (io_get_credits() != 1) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS credit down failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        bios_lsp_1st();
+        bus_write16(0x3C0000, 0x8001);
+        if (bus_read16(0x3C0002) != 0x0FFF) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB2 failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x8201);
+        if (bus_read16(0x3C0002) != 0xF800) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB3 failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x8401);
+        if (bus_read16(0x3C0002) != 0xBE00) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB4 failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
+        video_set_lspc_mode(0x0010);
+        if ((video_get_lspc_mode() >> 7) != timer_get_scanline() ||
+            (video_get_lspc_mode() & 0x007F) != 0x0010) {
+            fprintf(stderr, "[neodriftout] self-test: LSPC raster counter read failed\\n");
             neogeo_shutdown();
             return 1;
         }
