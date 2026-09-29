@@ -18,6 +18,7 @@
 
 #include <neogeorecomp/video.h>
 #include <neogeorecomp/palette.h>
+#include <neogeorecomp/timer.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -228,8 +229,8 @@ void video_set_lspc_mode(uint16_t mode) {
 }
 
 uint16_t video_get_lspc_mode(void) {
-    /* Upper byte = current raster line (set by timer system) */
-    return s_lspc_mode;
+    uint16_t raster = (uint16_t)(timer_get_scanline() & 0x01FFu);
+    return (uint16_t)((raster << 7) | (s_lspc_mode & 0x007Fu));
 }
 
 /* ----- Tile Decoding Helpers ----- */
