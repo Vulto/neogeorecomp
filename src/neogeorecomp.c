@@ -134,8 +134,8 @@ void neogeo_run(void) {
 
     /* Initialize BIOS RAM locations that games expect */
     bus_write8(0x10FD80, 0x00);  /* Game VBlank not active yet */
-    bus_write8(0x10FD82, 0x00);  /* System type: standard */
-    bus_write8(0x10FD83, 0x00);  /* Region: Japan */
+    bus_write8(0x10FD82, s_config.mvs_mode ? 0x80 : 0x00);  /* System type */
+    bus_write8(0x10FD83, (uint8_t)s_config.region);  /* Region */
     bus_bios_write8(0x10FDAE, 0x00);  /* Game state: 0 (init) */
 
     /* Find the game's key entry points */
