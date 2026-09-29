@@ -3,7 +3,7 @@
  *
  * Handles VRAM management, sprite rendering, and fix layer compositing.
  *
- * The Neo Geo renders 381 sprites per frame. Each sprite is a vertical
+ * The Neo Geo has 380 usable sprites per frame; sprite #0 is the active-list filler. Each sprite is a vertical
  * strip of 16x16 tiles. Wide objects are built by chaining sprites
  * horizontally via the "sticky bit" in SCB3.
  *
