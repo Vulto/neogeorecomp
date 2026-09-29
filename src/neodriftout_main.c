@@ -140,11 +140,14 @@ static void bios_vblank_process(void) {
     uint8_t status_raw = io_read_status_b();
     uint8_t status_current = 0;
 
-    /* BIOS_STATCURNT uses Start/Select order, positive logic. */
-    status_current |= (uint8_t)((((uint8_t)~status_raw) >> 1) & 0x01);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x01) << 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x08) >> 1);
-    status_current |= (uint8_t)((((uint8_t)~status_raw) & 0x04) << 1);
+    uint8_t status_positive = (uint8_t)~status_raw;
+    uint8_t status_raw_current = (uint8_t)(status_positive & 0x0F);
+
+    /* BIOS_STATCURNT maps P1/P2 Start/Select into bits 7..4. */
+    status_current = (uint8_t)((status_raw_current & 0x0A) << 6);
+
+    /* MVS does not expose Select in BIOS_STATCURNT. */
+    status_current &= 0xAA;
 
     static uint8_t prev_p1;
     static uint8_t prev_p2;
@@ -218,7 +221,7 @@ static void bios_vblank_process(void) {
     bus_write8(0x10FEDD, status_change);
 
     uint8_t credits = io_get_credits();
-    uint8_t p1_start_edge = status_change & 0x01;
+    uint8_t p1_start_edge = status_change & 0x80;
 
     /*
      * MVS flow: a Start edge consumes one credit. AES does not require
@@ -588,7 +591,7 @@ int main(int argc, char *argv[]) {
         bios_vblank_process();
         io_set_button(0, 0x01, true);
         bios_vblank_process();
-        if (bus_read8(0x10FD94) != 1 ||
+        if (bus_read8(0x10FD94) != 0 ||
             bus_read8(0x10FD96) != 0x01 ||
             bus_read8(0x10FD97) != 0x01) {
             fprintf(stderr, "[neodriftout] self-test: BIOS input RAM mapping failed\n");
@@ -596,6 +599,19 @@ int main(int argc, char *argv[]) {
             return 1;
         }
         io_set_button(0, 0x01, false);
+        bios_vblank_process();
+
+        io_set_button(0, IO_BTN_START << 4, true);
+        bios_vblank_process();
+        if (bus_read8(0x10FDAC) != 0x80 ||
+            bus_read8(0x10FDAD) != 0x80 ||
+            bus_read8(0x10FEDC) != 0x02 ||
+            bus_read8(0x10FEDD) != 0x02) {
+            fprintf(stderr, "[neodriftout] self-test: BIOS Start mapping failed\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        io_set_button(0, IO_BTN_START << 4, false);
         bios_vblank_process();
 
         io_set_button(0, 0x01, true);
