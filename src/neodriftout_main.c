@@ -248,10 +248,29 @@ static void bios_clear_fix(void) {
     }
 }
 
-/* $C004C8 — BIOS: process system requests */
-static void bios_process_requests(void) {
-    /* Handles coin counting, timer updates, etc.
-     * For now, just a no-op. */
+/* $C004C8 — LSP_1ST: initialize the sprite control blocks */
+static void bios_lsp_1st(void) {
+    /*
+     * The system ROM initializes the complete sprite state:
+     *   SCB2: maximum horizontal/vertical size ($0FFF)
+     *   SCB3: height 0, Y position 496 ($1F0 << 7)
+     *   SCB4: X position 380 ($BE00)
+     *   SCB1 sprite #0: active-list filler.
+     */
+    for (uint16_t spr = 0; spr <= NEOGEO_MAX_SPRITES; spr++) {
+        bus_write16(0x3C0000, (uint16_t)(0x8000 + spr));
+        bus_write16(0x3C0002, 0x0FFF);
+
+        bus_write16(0x3C0000, (uint16_t)(0x8200 + spr));
+        bus_write16(0x3C0002, 0x0000);
+
+        bus_write16(0x3C0000, (uint16_t)(0x8400 + spr));
+        bus_write16(0x3C0002, 0xBE00);
+    }
+
+    bus_write16(0x3C0000, 0x0000);
+    for (unsigned i = 0; i < 32; i++)
+        bus_write16(0x3C0002, 0x00FF);
 }
 
 /* $C00450 — BIOS: hardware test / controller detection */
@@ -267,7 +286,7 @@ static void register_bios_stubs(void) {
     func_table_register(0xC00444, bios_return_to_system);
     func_table_register(0xC0044A, bios_vblank_process);
     func_table_register(0xC004C2, bios_clear_fix);
-    func_table_register(0xC004C8, bios_process_requests);
+    func_table_register(0xC004C8, bios_lsp_1st);
     func_table_register(0xC00450, bios_hw_test);
     printf("[neodriftout] Registered 6 BIOS stubs\n");
 }
