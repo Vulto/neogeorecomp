@@ -479,6 +479,33 @@ int main(int argc, char *argv[]) {
             return 1;
         }
 
+        bios_lsp_1st();
+        bus_write16(0x3C0000, 0x8001);
+        if (bus_read16(0x3C0002) != 0x0FFF) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB2 failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x8201);
+        if (bus_read16(0x3C0002) != 0xF800) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB3 failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x8401);
+        if (bus_read16(0x3C0002) != 0xBE00) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB4 failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+        bus_write16(0x3C0000, 0x0000);
+        if (bus_read16(0x3C0002) != 0x00FF ||
+            bus_read16(0x3C0002) != 0x0000) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST sprite zero map failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
+
         bus_write16(0x100100, test16);
         bus_write32(0x100104, test32);
         if (bus_read16(0x100100) != test16 || bus_read32(0x100104) != test32) {
