@@ -250,6 +250,9 @@ static void bios_controller_setup(void) {
         s_p1_controller_status = 3;
         s_p2_controller_status = 0;
     }
+
+    bus_bios_write8(0x10FD94, s_p1_controller_status);
+    bus_bios_write8(0x10FD9A, s_p2_controller_status);
 }
 
 /* $C004C2 — BIOS: clear fix layer */
