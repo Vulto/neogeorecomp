@@ -570,7 +570,7 @@ void video_render_frame(uint32_t *framebuffer) {
             if ((sprite_scanline_mask[py][word] & bit) == 0)
                 continue;
 
-            draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
+            draw_sprite_line(tile_num, palette_idx, state->x + 16, py, source_y,
                              h_flip, argb, framebuffer, state->h_shrink);
         }
     }
