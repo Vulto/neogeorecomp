@@ -143,11 +143,18 @@ static void bios_vblank_process(void) {
     uint8_t status_positive = (uint8_t)~status_raw;
     uint8_t status_raw_current = (uint8_t)(status_positive & 0x0F);
 
-    /* BIOS_STATCURNT maps P1/P2 Start/Select into bits 7..4. */
-    status_current = (uint8_t)((status_raw_current & 0x0A) << 6);
-
-    /* MVS does not expose Select in BIOS_STATCURNT. */
-    status_current &= 0xAA;
+    /*
+     * REG_STATUS_B uses Select/Start pairs in bits 0..3, while the BIOS
+     * status byte reverses each pair: Select P1/Start P1 occupy bits 1/0,
+     * P2 occupy bits 3/2. MVS suppresses the Select bits.
+     */
+    status_current = (uint8_t)(
+        ((status_raw_current & 0x01) << 1) |
+        ((status_raw_current & 0x02) >> 1) |
+        ((status_raw_current & 0x04) << 1) |
+        ((status_raw_current & 0x08) >> 1)
+    );
+    status_current &= 0x55;
 
     static uint8_t prev_p1;
     static uint8_t prev_p2;
@@ -636,8 +643,8 @@ int main(int argc, char *argv[]) {
 
         io_set_button(0, IO_BTN_START << 4, true);
         bios_vblank_process();
-        if (bus_read8(0x10FDAC) != 0x80 ||
-            bus_read8(0x10FDAD) != 0x80 ||
+        if (bus_read8(0x10FDAC) != 0x01 ||
+            bus_read8(0x10FDAD) != 0x01 ||
             bus_read8(0x10FEDC) != 0x02 ||
             bus_read8(0x10FEDD) != 0x02) {
             fprintf(stderr, "[neodriftout] self-test: BIOS Start mapping failed\n");
