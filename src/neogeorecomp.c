@@ -15,6 +15,7 @@
 
 #include <neogeorecomp/neogeorecomp.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 /* ----- Internal State ----- */
@@ -97,6 +98,15 @@ int neogeo_init(const neogeo_config_t *config) {
 
     debug_init();
 
+    const char *max_frames = getenv("NEOGEO_MAX_FRAMES");
+    if (max_frames && *max_frames) {
+        char *end = NULL;
+        long parsed = strtol(max_frames, &end, 10);
+        if (end != max_frames && *end == '\0' && parsed > 0 && parsed <= INT_MAX)
+            s_max_frames = (int)parsed;
+    }
+
+    s_frame_count = 0;
     s_initialized = true;
     printf("[neogeorecomp] Initialization complete. %u functions registered.\n",
            func_table_count());
@@ -235,6 +245,8 @@ void neogeo_shutdown(void) {
     bus_shutdown();
 
     s_initialized = false;
+    s_frame_count = 0;
+    s_max_frames = 0;
 }
 
 /* ----- Frame Yield (called by game's spin-wait loops) ----- */
@@ -248,6 +260,7 @@ static void neogeo_run_timer_frame(void) {
 }
 
 static int s_frame_count = 0;
+static int s_max_frames = 0;
 
 bool neogeo_frame_yield(void) {
     neogeo_begin_frame();
@@ -266,6 +279,11 @@ bool neogeo_frame_yield(void) {
     neogeo_end_frame();
 
     s_frame_count++;
+    if (s_max_frames > 0 && s_frame_count >= s_max_frames) {
+        printf("[neogeorecomp] Frame limit reached: %d\n", s_frame_count);
+        s_frame_active = false;
+        return false;
+    }
 
     /* Poll input */
     if (!platform_poll_input()) {
