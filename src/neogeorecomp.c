@@ -262,9 +262,6 @@ static void neogeo_run_timer_frame(void) {
     }
 }
 
-static int s_frame_count = 0;
-static int s_max_frames = 0;
-
 bool neogeo_frame_yield(void) {
     neogeo_begin_frame();
     neogeo_run_timer_frame();
