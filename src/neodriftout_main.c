@@ -595,6 +595,13 @@ int main(int argc, char *argv[]) {
 
         bus_write16(0x3C0004, 0x0020);
         bios_lsp_1st();
+        bus_write16(0x3C0000, 0x003E);
+        if (bus_read16(0x3C0002) != 0x00FF ||
+            bus_read16(0x3C0002) != 0x0000) {
+            fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB1 filler map failed\\n");
+            neogeo_shutdown();
+            return 1;
+        }
         bus_write16(0x3C0000, 0x8001);
         if (bus_read16(0x3C0002) != 0x0FFF) {
             fprintf(stderr, "[neodriftout] self-test: LSP_1ST SCB2 failed\\n");
