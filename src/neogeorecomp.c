@@ -24,6 +24,8 @@
 static neogeo_config_t s_config;
 static bool s_initialized = false;
 static bool s_frame_active = false;
+static int s_frame_count = 0;
+static int s_max_frames = 0;
 static neogeo_func_t s_vblank_func = NULL;
 static neogeo_func_t s_timer_func = NULL;
 
