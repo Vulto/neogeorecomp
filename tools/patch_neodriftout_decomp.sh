@@ -12,7 +12,7 @@ files=$(find "$ROOT" -type f -name '*.c' -print)
 changed=0
 
 for file in $files; do
-    before=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" || true)
+    before=$(grep -E 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" | grep -Ev ': sbcd -(a[0-7]), -(a[0-7]), #\$[0-9A-Fa-f]+ ' | wc -l | tr -d ' ' || true)
 
     if [ "$before" -eq 0 ]; then
         continue
@@ -59,9 +59,9 @@ for file in $files; do
         s{/\* TODO \$[0-9A-Fa-f]+: abcd\.b -\(a([0-7])\), -\(a([0-7])\)\s+\[[^]]+\] \*/}{{ g_m68k.a[$1] -= 1; uint8_t _src = bus_read8(g_m68k.a[$1]); g_m68k.a[$2] -= 1; uint8_t _dst = bus_read8(g_m68k.a[$2]); M68K_ABCD8(_dst, _src); bus_write8(g_m68k.a[$2], _dst); }}g;
     ' "$file"
 
-    after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" || true)
+    after=$(grep -E 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" | grep -Ev ': sbcd -(a[0-7]), -(a[0-7]), #\$[0-9A-Fa-f]+ ' | wc -l | tr -d ' ' || true)
 
-    # The source tree is intentionally patchable in place because the generated
+    # Only instruction forms handled by this script are counted. Generated\n    # jump-table SBCD records with a malformed multiword decode are intentionally\n    # excluded; the audit reports them separately.\n    #\n    # The source tree is intentionally patchable in place because the generated
     # recompilation sources live in a submodule. A second make invocation can
     # therefore encounter a file that was already partially transformed by a
     # previous invocation. Treat such a file as progress if at least one
