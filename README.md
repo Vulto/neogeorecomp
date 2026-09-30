@@ -188,6 +188,19 @@ The repository contains a native executable target and a deterministic runtime s
 
 A successful self-test is a build/runtime sanity check; it is **not** evidence that the game itself boots correctly. Game execution requires the complete validated Neo Drift Out ROM set.
 
+### Private ROM CI
+
+For a real game-boot gate without publishing copyrighted ROM data, configure the repository secret `NEODRIFT_ROM_ZIP_B64` with a base64-encoded, legally obtained `neodrift.zip`. Then run the **Private ROM runtime** workflow manually from GitHub Actions.
+
+That workflow:
+1. builds the current source with `-Werror`;
+2. extracts and SHA-256 validates the eight required Neo Drift Out ROMs;
+3. runs the freshly built executable headlessly for exactly 300 frames;
+4. requires the runtime to reach the deterministic frame-limit exit;
+5. deletes the temporary ROM directory even when the job fails.
+
+The ROM ZIP is never uploaded as an artifact. The public Linux workflow remains ROM-free.
+
 ![Neo Drift Out Screenshot](https://raw.githubusercontent.com/sp00nznet/neodriftout/master/docs/screenshot_proof_of_life.png)
 
 ## Neo Drift Out decompilation pipeline
