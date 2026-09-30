@@ -50,7 +50,7 @@ jobs:
           NEOGEO_MAX_FRAMES=300 \
           SDL_VIDEODRIVER=dummy \
           SDL_AUDIODRIVER=dummy \
-          ./neodriftout --rom-path private-rom/roms 2>&1 | tee private-rom/runtime.log
+          timeout --signal=TERM --kill-after=5s 120s ./neodriftout --rom-path private-rom/roms 2>&1 | tee private-rom/runtime.log
           grep -F "[neogeorecomp] Frame limit reached: 300" private-rom/runtime.log
           if grep -Eq "Segmentation fault|AddressSanitizer|UndefinedBehaviorSanitizer" private-rom/runtime.log; then
             echo "runtime sanitizer/crash signature detected" >&2
