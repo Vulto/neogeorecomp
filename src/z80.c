@@ -18,12 +18,19 @@ static uint8_t s_z80_ram[Z80_RAM_SIZE];
 static uint8_t s_cmd_latch;
 static uint8_t s_reply_latch;
 static uint8_t s_bank[4];
+static uint32_t s_bank_address_mask;
 static bool s_nmi_enabled;
 
 static uint8_t rom_read(uint32_t offset) {
     if (!s_mrom || offset >= s_mrom_size)
         return 0xFF;
     return s_mrom[offset];
+}
+
+static uint32_t banked_rom_offset(unsigned region, uint8_t bank, uint32_t window_offset) {
+    static const unsigned shifts[4] = { 11, 12, 13, 14 };
+    uint32_t offset = 0x10000u + (((uint32_t)bank << shifts[region]) & s_bank_address_mask);
+    return offset + window_offset;
 }
 
 static uint8_t z80_mem_read(void *userdata, uint16_t address) {
@@ -33,16 +40,16 @@ static uint8_t z80_mem_read(void *userdata, uint16_t address) {
         return rom_read(address);
 
     if (address < 0xC000)
-        return rom_read((uint32_t)s_bank[3] * 0x4000u + (address - 0x8000u));
+        return rom_read(banked_rom_offset(3, s_bank[3], address - 0x8000u));
 
     if (address < 0xE000)
-        return rom_read((uint32_t)s_bank[2] * 0x2000u + (address - 0xC000u));
+        return rom_read(banked_rom_offset(2, s_bank[2], address - 0xC000u));
 
     if (address < 0xF000)
-        return rom_read((uint32_t)s_bank[1] * 0x1000u + (address - 0xE000u));
+        return rom_read(banked_rom_offset(1, s_bank[1], address - 0xE000u));
 
     if (address < 0xF800)
-        return rom_read((uint32_t)s_bank[0] * 0x0800u + (address - 0xF000u));
+        return rom_read(banked_rom_offset(0, s_bank[0], address - 0xF000u));
 
     return s_z80_ram[address - 0xF800u];
 }
@@ -158,6 +165,7 @@ void z80_shutdown(void) {
     free(s_mrom);
     s_mrom = NULL;
     s_mrom_size = 0;
+    s_bank_address_mask = 0;
 }
 
 int z80_load_mrom(const char *mrom_path) {
@@ -195,6 +203,10 @@ int z80_load_mrom(const char *mrom_path) {
     free(s_mrom);
     s_mrom = rom;
     s_mrom_size = (uint32_t)size;
+    if (s_mrom_size > 0x10000u)
+        s_bank_address_mask = (s_mrom_size - 0x10000u - 1u) & 0x3FFFFu;
+    else
+        s_bank_address_mask = 0;
     z80_setup();
 
     printf("[z80] Loaded M ROM: %u bytes\n", s_mrom_size);
