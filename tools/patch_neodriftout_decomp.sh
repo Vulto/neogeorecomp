@@ -60,8 +60,15 @@ for file in $files; do
     ' "$file"
 
     after=$(grep -Ec 'TODO \$[0-9A-Fa-f]+: (rox[rl]\.[bwl] |sbcd(\.b)? |nbcd\.b |movep\.|bftst |abcd\.b |cmpm\.[bwl] |dbt )' "$file" || true)
+
+    # The source tree is intentionally patchable in place because the generated
+    # recompilation sources live in a submodule. A second make invocation can
+    # therefore encounter a file that was already partially transformed by a
+    # previous invocation. Treat such a file as progress if at least one
+    # supported instruction was replaced; only fail when a matching TODO made
+    # no progress at all.
     if [ "$after" -ge "$before" ]; then
-        echo "decomp patch: failed to replace supported instructions in $file" >&2
+        echo "decomp patch: no progress replacing supported instructions in $file" >&2
         exit 1
     fi
 
