@@ -295,6 +295,8 @@ static void bios_lsp_1st(void) {
         bus_write16(0x3C0002, 0xBE00);
     }
 
+    /* LSP_1ST writes the sprite #0 tile map sequentially. */
+    bus_write16(0x3C0004, 0x0001);
     bus_write16(0x3C0000, 0x0000);
     for (unsigned i = 0; i < 32; i++) {
         bus_write16(0x3C0002, 0x00FF);
@@ -591,6 +593,7 @@ int main(int argc, char *argv[]) {
         io_set_dipsw(0xFF);
         bios_controller_setup();
 
+        bus_write16(0x3C0004, 0x0020);
         bios_lsp_1st();
         bus_write16(0x3C0000, 0x8001);
         if (bus_read16(0x3C0002) != 0x0FFF) {
