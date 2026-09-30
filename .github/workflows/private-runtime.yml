@@ -1,0 +1,57 @@
+name: Private ROM runtime
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    name: Boot Neo Drift Out with private ROM
+    runs-on: ubuntu-26.04
+    if: ${{ secrets.NEODRIFT_ROM_ZIP_B64 != '' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang llvm make libsdl3-dev
+
+      - name: Build
+        run: |
+          make clean
+          make CFLAGS="-std=c23 -O2 -Wall -Wextra -Wpedantic -Werror" \
+               CXXFLAGS="-std=c++14 -O2 -Wall -Wextra -Wpedantic -Werror"
+
+      - name: Materialize private ROM set
+        env:
+          ROM_ZIP_B64: ${{ secrets.NEODRIFT_ROM_ZIP_B64 }}
+        run: |
+          set -eu
+          umask 077
+          mkdir -p private-rom
+          printf '%s' "$ROM_ZIP_B64" | base64 -d > private-rom/neodrift.zip
+          make prepare-rom ROM=private-rom/neodrift.zip ROM_DIR=private-rom/roms
+          make romcheck ROM_DIR=private-rom/roms
+
+      - name: Boot and run 300 frames
+        run: |
+          set -eu
+          NEOGEO_HEADLESS=1 \
+          NEOGEO_MAX_FRAMES=300 \
+          SDL_VIDEODRIVER=dummy \
+          SDL_AUDIODRIVER=dummy \
+          ./neodriftout --rom-path private-rom/roms 2>&1 | tee private-rom/runtime.log
+          grep -F "[neogeorecomp] Frame limit reached: 300" private-rom/runtime.log
+          if grep -Fq "Segmentation fault\|AddressSanitizer\|UndefinedBehaviorSanitizer" private-rom/runtime.log; then
+            echo "runtime sanitizer/crash signature detected" >&2
+            exit 1
+          fi
+
+      - name: Remove private ROM data
+        if: always()
+        run: rm -rf private-rom
