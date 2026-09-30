@@ -46,6 +46,14 @@ jobs:
       - name: Native runtime self-test
         run: make test
 
+      - name: Sanitized runtime self-test
+        run: |
+          make clean
+          make CFLAGS="-std=c23 -O1 -g -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
+               CXXFLAGS="-std=c++14 -O1 -g -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
+               LDFLAGS="-fsanitize=address,undefined"
+          make test
+
       - name: Audit decompilation coverage
         run: make decomp-audit
 
