@@ -49,6 +49,7 @@ jobs:
       - name: Sanitized runtime self-test
         run: |
           make clean
+          git -C games/neodriftout checkout -- src/autorecomp
           make CFLAGS="-std=c23 -O1 -g -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
                CXXFLAGS="-std=c++14 -O1 -g -Wall -Wextra -Wpedantic -Werror -fsanitize=address,undefined -fno-omit-frame-pointer" \
                LDFLAGS="-fsanitize=address,undefined"
