@@ -587,8 +587,8 @@ void video_render_frame(uint32_t *framebuffer) {
             uint16_t tile_num = fix_entry & 0x0FFF;
             uint8_t palette_idx = (fix_entry >> 12) & 0x0F;
 
-            if (tile_num == 0) continue;
-
+            /* Tile $000 is valid hardware data; transparent pixels are
+             * handled by decode_fix_tile(), so it must not be discarded. */
             int px = col * 8;
             int py = row * 8;
 
