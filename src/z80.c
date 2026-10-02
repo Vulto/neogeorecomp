@@ -29,7 +29,7 @@ static uint8_t rom_read(uint32_t offset) {
 
 static uint32_t banked_rom_offset(unsigned region, uint8_t bank, uint32_t window_offset) {
     static const unsigned shifts[4] = { 11, 12, 13, 14 };
-    uint32_t offset = 0x10000u + (((uint32_t)bank << shifts[region]) & s_bank_address_mask);
+    uint32_t offset = ((uint32_t)bank << shifts[region]) & s_bank_address_mask;
     return offset + window_offset;
 }
 
@@ -204,7 +204,7 @@ int z80_load_mrom(const char *mrom_path) {
     s_mrom = rom;
     s_mrom_size = (uint32_t)size;
     if (s_mrom_size > 0x10000u)
-        s_bank_address_mask = (s_mrom_size - 0x10000u - 1u) & 0x3FFFFu;
+        s_bank_address_mask = s_mrom_size - 1u;
     else
         s_bank_address_mask = 0;
     z80_setup();
