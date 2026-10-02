@@ -60,10 +60,10 @@ jobs:
             tail -n 120 sanitizer-build.log >&2
             exit "$build_status"
           fi
-          timeout 120s env ASAN_OPTIONS="detect_leaks=1:halt_on_error=1" \
-          UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1" \
-          SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy NEOGEO_HEADLESS=1 \
-          ./neodriftout --self-test > sanitizer-test.log 2>&1
+          env ASAN_OPTIONS="detect_leaks=1:halt_on_error=1" \
+              UBSAN_OPTIONS="print_stacktrace=1:halt_on_error=1" \
+              SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy NEOGEO_HEADLESS=1 \
+              timeout 120s ./neodriftout --self-test > sanitizer-test.log 2>&1
           test_status=$?
           if [ "$test_status" -ne 0 ]; then
             echo "Sanitized runtime self-test failed:" >&2
