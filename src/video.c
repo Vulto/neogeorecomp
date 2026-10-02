@@ -305,10 +305,10 @@ static void draw_sprite_line(
     int pal_base = palette_idx * 16;
 
     for (int x = 0; x < 16; x++) {
-        int source_x = h_flip ? 15 - x : x;
-        if ((mask & (uint16_t)(1u << (15 - source_x))) == 0)
+        if ((mask & (uint16_t)(1u << (15 - x))) == 0)
             continue;
 
+        int source_x = h_flip ? 15 - x : x;
         int px = dst_x;
         dst_x = (dst_x + 1) & 0x1FF;
         if (px >= NEOGEO_SCREEN_WIDTH)
@@ -390,7 +390,7 @@ void video_render_frame(uint32_t *framebuffer) {
     /*
      * Neo Geo rendering pipeline:
      *   1. Fill with backdrop color (last palette entry)
-     *   2. Render sprites 380 -> 0 (lower index = higher priority, drawn last)
+     *   2. Render sprites in hardware order (higher index overwrites lower index)
      *   3. Render fix layer on top (always visible, highest priority)
      */
 
@@ -434,7 +434,7 @@ void video_render_frame(uint32_t *framebuffer) {
         int y_raw = (scb3 >> 7) & 0x1FF;
         int x_raw = (scb4 >> 7) & 0x1FF;
         int height = scb3 & 0x3F;
-        int y = (0x1F0 - y_raw) & 0x1FF;
+        int y = (0x200 - y_raw) & 0x1FF;
         int x = x_raw;
 
         bool sticky = (scb3 & 0x40) != 0;
@@ -447,7 +447,7 @@ void video_render_frame(uint32_t *framebuffer) {
         sprites[spr].h_shrink = (uint8_t)((scb2 >> 8) & 0x0F);
         sprites[spr].valid = height != 0;
 
-        if (sticky && spr > 0 && sprites[spr - 1].valid) {
+        if (sticky && spr > 0) {
             /*
              * Sticky sprites are placed immediately after the previous
              * sprite's displayed width. Horizontal shrinking is not
@@ -491,7 +491,7 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    for (int spr = NEOGEO_MAX_SPRITES; spr >= 1; spr--) {
+    for (int spr = 1; spr <= NEOGEO_MAX_SPRITES; spr++) {
         SpriteState *state = &sprites[spr];
         if (!state->valid || state->height <= 0)
             continue;
