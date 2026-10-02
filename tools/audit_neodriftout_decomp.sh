@@ -81,6 +81,12 @@ if [ "$unhandled_code" -gt 0 ]; then
     ' $(find "$ROOT" -type f -name '*.c' -print) | sort -nr
 fi
 
+if [ "$unhandled_code" -gt 0 ]; then
+    echo
+    echo "decomp audit FAILED: executable functions still contain UNHANDLED operands." >&2
+    exit 1
+fi
+
 echo
-echo "Audit completed after the deterministic decomp patch stage."
+echo "Audit completed: no UNHANDLED operands remain in executable functions."
 echo "dc.w, SBCD/CHK jump-table records, and generated non-RTS/jump-table unhandled operands are reported separately because they are generated data, not executable decomp gaps."
