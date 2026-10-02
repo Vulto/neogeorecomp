@@ -408,8 +408,16 @@ void video_render_frame(uint32_t *framebuffer) {
      *   3. Render fix layer on top (always visible, highest priority)
      */
 
+    if (!s_auto_anim_disabled) {
+        if (s_auto_anim_frame_counter == 0) {
+            s_auto_anim_frame_counter = s_auto_anim_speed;
+            s_auto_anim_counter++;
+        } else {
+            s_auto_anim_frame_counter--;
+        }
+    }
+
     const uint32_t *argb = s_shadow ? palette_get_shadow_argb_table() : palette_get_argb_table();
-    uint32_t backdrop = argb[NEOGEO_NUM_PALETTES * NEOGEO_COLORS_PER_PAL - 1];
 
     /* 1. Fill with backdrop */
     for (int i = 0; i < NEOGEO_SCREEN_WIDTH * NEOGEO_SCREEN_HEIGHT; i++) {
@@ -608,14 +616,6 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    if (!s_auto_anim_disabled) {
-        if (s_auto_anim_frame_counter == 0) {
-            s_auto_anim_frame_counter = s_auto_anim_speed;
-            s_auto_anim_counter++;
-        } else {
-            s_auto_anim_frame_counter--;
-        }
-    }
 }
 
 /* ----- Fix Layer Control ----- */
