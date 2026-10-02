@@ -199,14 +199,14 @@ int video_load_l0(const char *l0_path) {
 /* ----- VRAM Access ----- */
 
 static uint16_t normalize_vram_addr(uint16_t addr) {
-    return (addr & 0x8000u) ? (uint16_t)(0x8000u | (addr & 0x07FFu))
-                            : (uint16_t)(addr & 0x7FFFu);
+    if (addr >= 0x8000u)
+        return (uint16_t)(0x8000u | (addr & 0x07FFu));
+    return addr;
 }
 
 static void advance_vram_addr(void) {
-    s_vram_addr = (uint16_t)((s_vram_addr & 0x8000u) |
-                             ((s_vram_addr + (uint16_t)s_vram_mod) & 0x7FFFu));
-    s_vram_addr = normalize_vram_addr(s_vram_addr);
+    uint16_t next = (uint16_t)(s_vram_addr + (uint16_t)s_vram_mod);
+    s_vram_addr = normalize_vram_addr(next);
 }
 
 void video_set_vram_addr(uint16_t addr) {
