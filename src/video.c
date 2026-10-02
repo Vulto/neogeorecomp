@@ -479,6 +479,7 @@ void video_render_frame(uint32_t *framebuffer) {
             sprites[spr].height = sprites[spr - 1].height;
             sprites[spr].special_size_33 = sprites[spr - 1].special_size_33;
             sprites[spr].v_shrink = sprites[spr - 1].v_shrink;
+            sprites[spr].valid = sprites[spr - 1].valid;
         }
     }
 
@@ -489,7 +490,7 @@ void video_render_frame(uint32_t *framebuffer) {
     /*
      * The hardware evaluates sprite entries in ascending sprite-number
      * order for the per-scanline limit. Record the entries that survive
-     * first, then render them in reverse order for priority.
+     * first, then render them in the same order for priority.
      */
     for (int spr = 0; spr <= NEOGEO_MAX_SPRITES; spr++) {
         SpriteState *state = &sprites[spr];
