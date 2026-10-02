@@ -64,8 +64,11 @@ static uint8_t z80_port_in(z80 *cpu, uint8_t port) {
     (void)cpu;
 
     switch (port) {
-    case 0x00:
-        return s_cmd_latch;
+    case 0x00: {
+        uint8_t command = s_cmd_latch;
+        s_cmd_latch = 0;
+        return command;
+    }
 
     case 0x04:
         return ym2610_read(0);
@@ -238,6 +241,10 @@ void z80_send_command(uint8_t cmd) {
 
 uint8_t z80_read_reply(void) {
     return s_reply_latch;
+}
+
+bool z80_command_pending(void) {
+    return s_cmd_latch != 0;
 }
 
 void z80_set_nmi_enabled(bool enabled) {
