@@ -315,7 +315,7 @@ static void draw_sprite_line(
             continue;
 
         int source_x = h_flip ? 15 - x : x;
-        int px = (hardware_x + 16) & 0x1FF;
+        int px = hardware_x;
         hardware_x = (hardware_x + 1) & 0x1FF;
         if (px >= NEOGEO_SCREEN_WIDTH)
             continue;
@@ -447,7 +447,7 @@ void video_render_frame(uint32_t *framebuffer) {
         int y_raw = (scb3 >> 7) & 0x1FF;
         int x_raw = (scb4 >> 7) & 0x1FF;
         int height = scb3 & 0x3F;
-        int y = (0x200 - y_raw) & 0x1FF;
+        int y = (496 - y_raw) & 0x1FF;
         int x = x_raw;
 
         bool sticky = (scb3 & 0x40) != 0;
