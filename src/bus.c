@@ -341,7 +341,8 @@ uint16_t bus_read16(uint32_t addr) {
         /* I/O and video registers */
         switch (addr) {
             case 0x300000: return (uint16_t)io_read_p1cnt() << 8 | io_read_dipsw();
-            case 0x320000: return (uint16_t)z80_read_reply() << 8 | io_read_status_a();
+            case 0x320000:
+                return (uint16_t)z80_read_reply() << 8 | io_read_status_a();
             case 0x340000: return (uint16_t)io_read_p2cnt() << 8;
             case 0x380000: return (uint16_t)io_read_status_b() << 8;
             case 0x3C0000: return 0; /* VRAMADDR is write-only for practical purposes */
@@ -425,14 +426,12 @@ void bus_write8(uint32_t addr, uint8_t val) {
         return;
     }
     if (addr < 0x800000) {
-        /* Palette RAM — byte writes are unusual but handled */
+        /*
+         * Neo Geo palette RAM has /WE tied to both bytes: an 8-bit write
+         * replicates the written byte into both halves of the color word.
+         */
         uint16_t offset = (uint16_t)((addr & 0x1FFF) >> 1);
-        uint16_t cur = palette_read(offset);
-        if (addr & 1) {
-            palette_write(offset, (cur & 0xFF00) | val);
-        } else {
-            palette_write(offset, ((uint16_t)val << 8) | (cur & 0xFF));
-        }
+        palette_write(offset, (uint16_t)val | ((uint16_t)val << 8));
         return;
     }
     if (addr >= 0xD00000 && addr < 0xE00000) {

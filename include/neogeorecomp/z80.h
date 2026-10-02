@@ -67,6 +67,9 @@ void z80_execute(int cycles);
  */
 void z80_send_command(uint8_t cmd);
 
+/* Return whether the last sound command is still pending on the Z80 side. */
+bool z80_command_pending(void);
+
 /*
  * Read the Z80's reply byte.
  * Called by the bus layer when the 68k reads from $320000.

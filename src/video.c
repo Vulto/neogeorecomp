@@ -198,24 +198,30 @@ int video_load_l0(const char *l0_path) {
 
 /* ----- VRAM Access ----- */
 
+static uint16_t normalize_vram_addr(uint16_t addr) {
+    if (addr >= 0x8000u)
+        return (uint16_t)(0x8000u | (addr & 0x07FFu));
+    return addr;
+}
+
+static void advance_vram_addr(void) {
+    uint16_t next = (uint16_t)(s_vram_addr + (uint16_t)s_vram_mod);
+    s_vram_addr = normalize_vram_addr(next);
+}
+
 void video_set_vram_addr(uint16_t addr) {
-    s_vram_addr = addr;
+    s_vram_addr = normalize_vram_addr(addr);
 }
 
 uint16_t video_read_vram(void) {
-    uint16_t val = 0;
-    if (s_vram_addr < NEOGEO_VRAM_SIZE) {
-        val = s_vram[s_vram_addr];
-    }
-    s_vram_addr = (uint16_t)(s_vram_addr + s_vram_mod);
+    uint16_t val = s_vram[s_vram_addr];
+    advance_vram_addr();
     return val;
 }
 
 void video_write_vram(uint16_t val) {
-    if (s_vram_addr < NEOGEO_VRAM_SIZE) {
-        s_vram[s_vram_addr] = val;
-    }
-    s_vram_addr = (uint16_t)(s_vram_addr + s_vram_mod);
+    s_vram[s_vram_addr] = val;
+    advance_vram_addr();
 }
 
 void video_set_vram_mod(uint16_t mod) {
@@ -231,7 +237,7 @@ void video_set_lspc_mode(uint16_t mode) {
 uint16_t video_get_lspc_mode(void) {
     /* NTSC LSPC counter spans $0F8..$1FF for the 264-line frame. */
     uint16_t raster = (uint16_t)((timer_get_scanline() + 0x00F8u) & 0x01FFu);
-    return (uint16_t)((raster << 7) | (s_lspc_mode & 0x007Fu));
+    return (uint16_t)((raster << 7) | (s_auto_anim_counter & 0x0007u));
 }
 
 /* ----- Tile Decoding Helpers ----- */
@@ -301,16 +307,16 @@ static void draw_sprite_line(
     uint8_t h_shrink)
 {
     uint16_t mask = s_zoom_x[h_shrink & 0x0F];
-    int dst_x = screen_x & 0x1FF;
+    int hardware_x = screen_x & 0x1FF;
     int pal_base = palette_idx * 16;
 
     for (int x = 0; x < 16; x++) {
-        int source_x = h_flip ? 15 - x : x;
-        if ((mask & (uint16_t)(1u << (15 - source_x))) == 0)
+        if ((mask & (uint16_t)(1u << (15 - x))) == 0)
             continue;
 
-        int px = dst_x;
-        dst_x = (dst_x + 1) & 0x1FF;
+        int source_x = h_flip ? 15 - x : x;
+        int px = (hardware_x + 16) & 0x1FF;
+        hardware_x = (hardware_x + 1) & 0x1FF;
         if (px >= NEOGEO_SCREEN_WIDTH)
             continue;
 
@@ -390,9 +396,18 @@ void video_render_frame(uint32_t *framebuffer) {
     /*
      * Neo Geo rendering pipeline:
      *   1. Fill with backdrop color (last palette entry)
-     *   2. Render sprites 380 -> 0 (lower index = higher priority, drawn last)
+     *   2. Render sprites in hardware order (higher index overwrites lower index)
      *   3. Render fix layer on top (always visible, highest priority)
      */
+
+    if (!s_auto_anim_disabled) {
+        if (s_auto_anim_frame_counter == 0) {
+            s_auto_anim_frame_counter = s_auto_anim_speed;
+            s_auto_anim_counter++;
+        } else {
+            s_auto_anim_frame_counter--;
+        }
+    }
 
     const uint32_t *argb = s_shadow ? palette_get_shadow_argb_table() : palette_get_argb_table();
     uint32_t backdrop = argb[NEOGEO_NUM_PALETTES * NEOGEO_COLORS_PER_PAL - 1];
@@ -402,12 +417,11 @@ void video_render_frame(uint32_t *framebuffer) {
         framebuffer[i] = backdrop;
     }
 
-    /* 2. Render sprites (back to front: high index first, low index on top)
+    /* 2. Render sprites in ascending sprite-number order; higher-numbered
+     * sprites overwrite lower-numbered sprites.
      *
-     * Sprite chaining: when the sticky bit is set in SCB3, the sprite
-     * inherits the X position of the previous sprite + 16 pixels.
-     * This allows building wide objects from multiple vertical strips.
-     * We track chain_x across iterations for this purpose.
+     * Sprite chaining uses the previous sprite's horizontal zoom width,
+     * allowing wide objects to be assembled from adjacent vertical strips.
      */
     typedef struct {
         int x;
@@ -422,9 +436,8 @@ void video_render_frame(uint32_t *framebuffer) {
     SpriteState sprites[NEOGEO_MAX_SPRITES + 1] = {0};
 
     /*
-     * Resolve sticky chains in sprite-number order first. Rendering is
-     * performed in reverse order afterwards so lower sprite numbers have
-     * higher priority.
+     * Resolve sticky chains in sprite-number order first, then render
+     * them in the same order for the hardware priority relationship.
      */
     for (int spr = 1; spr <= NEOGEO_MAX_SPRITES; spr++) {
         uint16_t scb3 = s_vram[0x8200 + spr];
@@ -434,7 +447,7 @@ void video_render_frame(uint32_t *framebuffer) {
         int y_raw = (scb3 >> 7) & 0x1FF;
         int x_raw = (scb4 >> 7) & 0x1FF;
         int height = scb3 & 0x3F;
-        int y = (0x1F0 - y_raw) & 0x1FF;
+        int y = (496 - y_raw) & 0x1FF;
         int x = x_raw;
 
         bool sticky = (scb3 & 0x40) != 0;
@@ -447,12 +460,10 @@ void video_render_frame(uint32_t *framebuffer) {
         sprites[spr].h_shrink = (uint8_t)((scb2 >> 8) & 0x0F);
         sprites[spr].valid = height != 0;
 
-        if (sticky && spr > 0 && sprites[spr - 1].valid) {
+        if (sticky && spr > 0) {
             /*
-             * Sticky sprites are placed immediately after the previous
-             * sprite's displayed width. Horizontal shrinking is not
-             * inherited, so use the previous sprite's own SCB2 width:
-             * $0 = 1 pixel ... $F = 16 pixels.
+             * Sticky sprites advance by the previous sprite's horizontal
+             * zoom width: $0 = 1 pixel ... $F = 16 pixels.
              */
             sprites[spr].x =
                 (sprites[spr - 1].x + sprites[spr - 1].h_shrink + 1) & 0x1FF;
@@ -460,6 +471,7 @@ void video_render_frame(uint32_t *framebuffer) {
             sprites[spr].height = sprites[spr - 1].height;
             sprites[spr].special_size_33 = sprites[spr - 1].special_size_33;
             sprites[spr].v_shrink = sprites[spr - 1].v_shrink;
+            sprites[spr].valid = sprites[spr - 1].valid;
         }
     }
 
@@ -470,7 +482,7 @@ void video_render_frame(uint32_t *framebuffer) {
     /*
      * The hardware evaluates sprite entries in ascending sprite-number
      * order for the per-scanline limit. Record the entries that survive
-     * first, then render them in reverse order for priority.
+     * first, then render them in the same order for priority.
      */
     for (int spr = 0; spr <= NEOGEO_MAX_SPRITES; spr++) {
         SpriteState *state = &sprites[spr];
@@ -492,7 +504,7 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    for (int spr = NEOGEO_MAX_SPRITES; spr >= 1; spr--) {
+    for (int spr = 1; spr <= NEOGEO_MAX_SPRITES; spr++) {
         SpriteState *state = &sprites[spr];
         if (!state->valid || state->height <= 0)
             continue;
@@ -596,14 +608,6 @@ void video_render_frame(uint32_t *framebuffer) {
         }
     }
 
-    if (!s_auto_anim_disabled) {
-        if (s_auto_anim_frame_counter == 0) {
-            s_auto_anim_frame_counter = s_auto_anim_speed;
-            s_auto_anim_counter++;
-        } else {
-            s_auto_anim_frame_counter--;
-        }
-    }
 }
 
 /* ----- Fix Layer Control ----- */

@@ -20,6 +20,7 @@ static uint8_t s_reply_latch;
 static uint8_t s_bank[4];
 static uint32_t s_bank_address_mask;
 static bool s_nmi_enabled;
+static bool s_command_pending;
 
 static uint8_t rom_read(uint32_t offset) {
     if (!s_mrom || offset >= s_mrom_size)
@@ -29,7 +30,7 @@ static uint8_t rom_read(uint32_t offset) {
 
 static uint32_t banked_rom_offset(unsigned region, uint8_t bank, uint32_t window_offset) {
     static const unsigned shifts[4] = { 11, 12, 13, 14 };
-    uint32_t offset = 0x10000u + (((uint32_t)bank << shifts[region]) & s_bank_address_mask);
+    uint32_t offset = ((uint32_t)bank << shifts[region]) & s_bank_address_mask;
     return offset + window_offset;
 }
 
@@ -64,8 +65,12 @@ static uint8_t z80_port_in(z80 *cpu, uint8_t port) {
     (void)cpu;
 
     switch (port) {
-    case 0x00:
-        return s_cmd_latch;
+    case 0x00: {
+        uint8_t command = s_cmd_latch;
+        s_cmd_latch = 0;
+        s_command_pending = false;
+        return command;
+    }
 
     case 0x04:
         return ym2610_read(0);
@@ -149,12 +154,14 @@ static void z80_setup(void) {
     s_bank[2] = 0x06;
     s_bank[3] = 0x02;
     s_nmi_enabled = false;
+    s_command_pending = false;
 }
 
 int z80_init(void) {
     memset(s_z80_ram, 0, sizeof(s_z80_ram));
     s_cmd_latch = 0;
     s_reply_latch = 0;
+    s_command_pending = false;
     s_mrom = NULL;
     s_mrom_size = 0;
     z80_setup();
@@ -204,7 +211,7 @@ int z80_load_mrom(const char *mrom_path) {
     s_mrom = rom;
     s_mrom_size = (uint32_t)size;
     if (s_mrom_size > 0x10000u)
-        s_bank_address_mask = (s_mrom_size - 0x10000u - 1u) & 0x3FFFFu;
+        s_bank_address_mask = s_mrom_size - 1u;
     else
         s_bank_address_mask = 0;
     z80_setup();
@@ -231,6 +238,7 @@ void z80_execute(int cycles) {
 
 void z80_send_command(uint8_t cmd) {
     s_cmd_latch = cmd;
+    s_command_pending = true;
     if (s_nmi_enabled) {
         z80_gen_nmi(&s_cpu);
     }
@@ -238,6 +246,10 @@ void z80_send_command(uint8_t cmd) {
 
 uint8_t z80_read_reply(void) {
     return s_reply_latch;
+}
+
+bool z80_command_pending(void) {
+    return s_command_pending;
 }
 
 void z80_set_nmi_enabled(bool enabled) {
@@ -252,6 +264,7 @@ void z80_reset(void) {
     memset(s_z80_ram, 0, sizeof(s_z80_ram));
     s_cmd_latch = 0;
     s_reply_latch = 0;
+    s_command_pending = false;
     s_nmi_enabled = false;
     z80_setup();
 }
