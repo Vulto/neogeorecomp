@@ -198,24 +198,30 @@ int video_load_l0(const char *l0_path) {
 
 /* ----- VRAM Access ----- */
 
+static uint16_t normalize_vram_addr(uint16_t addr) {
+    return (addr & 0x8000u) ? (uint16_t)(0x8000u | (addr & 0x07FFu))
+                            : (uint16_t)(addr & 0x7FFFu);
+}
+
+static void advance_vram_addr(void) {
+    s_vram_addr = (uint16_t)((s_vram_addr & 0x8000u) |
+                             ((s_vram_addr + (uint16_t)s_vram_mod) & 0x7FFFu));
+    s_vram_addr = normalize_vram_addr(s_vram_addr);
+}
+
 void video_set_vram_addr(uint16_t addr) {
-    s_vram_addr = addr;
+    s_vram_addr = normalize_vram_addr(addr);
 }
 
 uint16_t video_read_vram(void) {
-    uint16_t val = 0;
-    if (s_vram_addr < NEOGEO_VRAM_SIZE) {
-        val = s_vram[s_vram_addr];
-    }
-    s_vram_addr = (uint16_t)(s_vram_addr + s_vram_mod);
+    uint16_t val = s_vram[s_vram_addr];
+    advance_vram_addr();
     return val;
 }
 
 void video_write_vram(uint16_t val) {
-    if (s_vram_addr < NEOGEO_VRAM_SIZE) {
-        s_vram[s_vram_addr] = val;
-    }
-    s_vram_addr = (uint16_t)(s_vram_addr + s_vram_mod);
+    s_vram[s_vram_addr] = val;
+    advance_vram_addr();
 }
 
 void video_set_vram_mod(uint16_t mod) {
