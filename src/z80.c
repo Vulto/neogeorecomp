@@ -154,6 +154,7 @@ static void z80_setup(void) {
     s_bank[2] = 0x06;
     s_bank[3] = 0x02;
     s_nmi_enabled = false;
+    s_command_pending = false;
 }
 
 int z80_init(void) {
