@@ -454,8 +454,7 @@ void video_render_frame(uint32_t *framebuffer) {
              * inherited, so use the previous sprite's own SCB2 width:
              * $0 = 1 pixel ... $F = 16 pixels.
              */
-            sprites[spr].x =
-                (sprites[spr - 1].x + sprites[spr - 1].h_shrink + 1) & 0x1FF;
+            sprites[spr].x = (sprites[spr - 1].x + 16) & 0x1FF;
             sprites[spr].y = sprites[spr - 1].y;
             sprites[spr].height = sprites[spr - 1].height;
             sprites[spr].special_size_33 = sprites[spr - 1].special_size_33;
@@ -570,7 +569,7 @@ void video_render_frame(uint32_t *framebuffer) {
             if ((sprite_scanline_mask[py][word] & bit) == 0)
                 continue;
 
-            draw_sprite_line(tile_num, palette_idx, state->x, py, source_y,
+            draw_sprite_line(tile_num, palette_idx, state->x + 16, py, source_y,
                              h_flip, argb, framebuffer, state->h_shrink);
         }
     }
