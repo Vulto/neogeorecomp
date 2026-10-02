@@ -341,12 +341,8 @@ uint16_t bus_read16(uint32_t addr) {
         /* I/O and video registers */
         switch (addr) {
             case 0x300000: return (uint16_t)io_read_p1cnt() << 8 | io_read_dipsw();
-            case 0x320000: {
-                uint8_t reply = z80_read_reply();
-                if (z80_command_pending())
-                    reply &= 0x7Fu;
-                return (uint16_t)reply << 8 | io_read_status_a();
-            }
+            case 0x320000:
+                return (uint16_t)z80_read_reply() << 8 | io_read_status_a();
             case 0x340000: return (uint16_t)io_read_p2cnt() << 8;
             case 0x380000: return (uint16_t)io_read_status_b() << 8;
             case 0x3C0000: return 0; /* VRAMADDR is write-only for practical purposes */
