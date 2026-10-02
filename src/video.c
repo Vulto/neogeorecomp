@@ -315,24 +315,10 @@ static void draw_sprite_line(
             continue;
 
         int source_x = h_flip ? 15 - x : x;
-        int px;
-
-        /*
-         * The LSPC's visible origin is NEOGEO_HBEND pixels after the
-         * hardware sprite X coordinate. Coordinates past the right edge
-         * wrap only after the 9-bit hardware position reaches 0x200.
-         */
-        if (hardware_x <= 0x1F0) {
-            px = hardware_x + 16;
-            hardware_x++;
-            if (px >= NEOGEO_SCREEN_WIDTH)
-                continue;
-        } else {
-            px = hardware_x - 0x200;
-            hardware_x++;
-            if (px < 0 || px >= NEOGEO_SCREEN_WIDTH)
-                continue;
-        }
+        int px = (hardware_x + 16) & 0x1FF;
+        hardware_x = (hardware_x + 1) & 0x1FF;
+        if (px >= NEOGEO_SCREEN_WIDTH)
+            continue;
 
         uint8_t pixel = sprite_pixel(tile_num, source_x, source_y);
         if (pixel == 0)
