@@ -418,18 +418,18 @@ void video_render_frame(uint32_t *framebuffer) {
     }
 
     const uint32_t *argb = s_shadow ? palette_get_shadow_argb_table() : palette_get_argb_table();
+    uint32_t backdrop = argb[NEOGEO_NUM_PALETTES * NEOGEO_COLORS_PER_PAL - 1];
 
     /* 1. Fill with backdrop */
     for (int i = 0; i < NEOGEO_SCREEN_WIDTH * NEOGEO_SCREEN_HEIGHT; i++) {
         framebuffer[i] = backdrop;
     }
 
-    /* 2. Render sprites (back to front: high index first, low index on top)
+    /* 2. Render sprites in ascending sprite-number order; higher-numbered
+     * sprites overwrite lower-numbered sprites.
      *
-     * Sprite chaining: when the sticky bit is set in SCB3, the sprite
-     * inherits the X position of the previous sprite + 16 pixels.
-     * This allows building wide objects from multiple vertical strips.
-     * We track chain_x across iterations for this purpose.
+     * Sprite chaining uses the previous sprite's horizontal zoom width,
+     * allowing wide objects to be assembled from adjacent vertical strips.
      */
     typedef struct {
         int x;
@@ -444,9 +444,8 @@ void video_render_frame(uint32_t *framebuffer) {
     SpriteState sprites[NEOGEO_MAX_SPRITES + 1] = {0};
 
     /*
-     * Resolve sticky chains in sprite-number order first. Rendering is
-     * performed in reverse order afterwards so lower sprite numbers have
-     * higher priority.
+     * Resolve sticky chains in sprite-number order first, then render
+     * them in the same order for the hardware priority relationship.
      */
     for (int spr = 1; spr <= NEOGEO_MAX_SPRITES; spr++) {
         uint16_t scb3 = s_vram[0x8200 + spr];
