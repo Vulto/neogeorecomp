@@ -231,7 +231,7 @@ void video_set_lspc_mode(uint16_t mode) {
 uint16_t video_get_lspc_mode(void) {
     /* NTSC LSPC counter spans $0F8..$1FF for the 264-line frame. */
     uint16_t raster = (uint16_t)((timer_get_scanline() + 0x00F8u) & 0x01FFu);
-    return (uint16_t)((raster << 7) | (s_lspc_mode & 0x007Fu));
+    return (uint16_t)((raster << 7) | (s_auto_anim_counter & 0x0007u));
 }
 
 /* ----- Tile Decoding Helpers ----- */
