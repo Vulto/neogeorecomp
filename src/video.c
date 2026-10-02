@@ -315,7 +315,7 @@ static void draw_sprite_line(
             continue;
 
         int source_x = h_flip ? 15 - x : x;
-        int px = hardware_x;
+        int px = (hardware_x + 16) & 0x1FF;
         hardware_x = (hardware_x + 1) & 0x1FF;
         if (px >= NEOGEO_SCREEN_WIDTH)
             continue;
